@@ -75,7 +75,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: f446927c770bdb04888ffc8efc48e498, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 4332fb9d4769f5443858943f9d3e3fae, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -135,10 +135,12 @@ GameObject:
   - component: {fileID: 5736193815352412803}
   - component: {fileID: 8340632380445173215}
   - component: {fileID: 679445346379421645}
+  - component: {fileID: 6757656373610055419}
+  - component: {fileID: 17588445605711114}
   - component: {fileID: -2669370250046232906}
   - component: {fileID: -3571214422928673250}
   m_Layer: 0
-  m_Name: Witch
+  m_Name: DefaultPlayer
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -246,10 +248,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d1bcee488d0a9c49b33cef6238cb32a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  view: {fileID: 679445346379421645, guid: a8434e41cca176d48bcbc9be183acab2, type: 3}
+  view: {fileID: 679445346379421645}
   mSpeed: 6
   candyText: {fileID: 5160945775300235321}
   playerName: {fileID: 3880428062645300969}
+  playerAvatarImage: {fileID: 1183573414354059085}
+  avatars:
+  - {fileID: 21300000, guid: 4332fb9d4769f5443858943f9d3e3fae, type: 3}
+  - {fileID: 21300000, guid: a1606ce2bccfb784f8cfcf3d58b4a707, type: 3}
+  - {fileID: 21300000, guid: cb3229a81bc6c944ba7399f61dae67fe, type: 3}
+  - {fileID: 21300000, guid: f446927c770bdb04888ffc8efc48e498, type: 3}
+  - {fileID: 21300000, guid: 41dd3b642f509ae42a945f63c26a16c1, type: 3}
 --- !u!114 &679445346379421645
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -274,6 +283,42 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!111 &6757656373610055419
+Animation:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4269040623194578316}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Animation: {fileID: 0}
+  m_Animations: []
+  m_WrapMode: 0
+  m_PlayAutomatically: 1
+  m_AnimatePhysics: 0
+  m_CullingType: 0
+--- !u!95 &17588445605711114
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4269040623194578316}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 0}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &-2669370250046232906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -349,7 +394,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6379168682773685336}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -431,8 +476,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 3863924735
+  m_fontColor: {r: 1, g: 0.8117647, b: 0.30588236, a: 0.9019608}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -520,7 +565,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6883801610209156068}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -602,8 +647,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 3875536895
+  m_fontColor: {r: 1, g: 1, b: 1, a: 0.9019608}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

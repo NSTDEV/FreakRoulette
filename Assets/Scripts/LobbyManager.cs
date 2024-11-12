@@ -3,6 +3,7 @@ using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
@@ -35,14 +36,8 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     private void Update()
     {
-        if (PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.PlayerCount >= 2)
-        {
-            playButton.SetActive(true);
-        }
-        else
-        {
-            playButton.SetActive(false);
-        }
+        // Muestra el botón de jugar solo si eres el MasterClient y hay 2 o más jugadores
+        playButton.SetActive(PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom.PlayerCount >= 2);
     }
 
     public void CreateRoom()
@@ -57,8 +52,13 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     {
         if (nameInput.text.Length >= 1)
         {
-            PhotonNetwork.JoinRoom(nameInput.text); ;
+            PhotonNetwork.JoinRoom(nameInput.text);
         }
+    }
+
+    public void OnClickJoinRoom()
+    {
+        PhotonNetwork.JoinRoom(roomItemPrefab.roomName.text);
     }
 
     public void OnClickLeaveRoom()
@@ -68,6 +68,14 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public void OnClickPlayButton()
     {
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            PlayerItem playerItem = playerItemsList.Find(item => item.player == player);
+            if (playerItem != null)
+            {
+                playerItem.SetPlayerInfo(player);
+            }
+        }
         PhotonNetwork.LoadLevel("Game");
     }
 

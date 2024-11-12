@@ -5,19 +5,15 @@ using System.Collections;
 public class CandyGenerator : MonoBehaviour
 {
     public GameObject candyPrefab;
-    public float rotationSpeed = 0.5f;
-    public float respawnTime = 5f; // Tiempo de espera para que aparezca un nuevo caramelo
-
-    private bool isCandyCollected = false; // Para verificar si el caramelo fue recogido
+    public float rotationSpeed = 5f;
+    public float respawnTime = 1.5f;
 
     void Start()
     {
-        StartCoroutine(RespawnCandy());
-    }
-
-    void Update()
-    {
-        transform.Rotate(0f, 0f, rotationSpeed, Space.Self);
+        if (PhotonNetwork.IsMasterClient)
+        {
+            StartCoroutine(RespawnCandy());
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -25,8 +21,6 @@ public class CandyGenerator : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             PhotonView playerPhotonView = other.GetComponent<PhotonView>();
-
-            // Asegurarse de que solo el jugador local que recoge el caramelo lo incremente
             if (playerPhotonView != null && playerPhotonView.IsMine)
             {
                 PlayerController playerController = other.GetComponent<PlayerController>();
@@ -35,12 +29,6 @@ public class CandyGenerator : MonoBehaviour
                     playerController.IncreaseCandies();
                 }
             }
-
-            // Destruir el caramelo original en todos los clientes
-            PhotonNetwork.Destroy(gameObject); // Destruye el caramelo actual en todos los clientes
-
-            // Marcar que el caramelo fue recogido
-            isCandyCollected = true;
         }
     }
 
@@ -48,17 +36,12 @@ public class CandyGenerator : MonoBehaviour
     {
         while (true)
         {
-            if (isCandyCollected)
-            {
-                yield return new WaitForSeconds(respawnTime);
+            yield return new WaitForSeconds(respawnTime);
 
-                Vector2 randomPosition = new Vector2(Random.Range(-5, 5), Random.Range(-5, 5));
-                PhotonNetwork.Instantiate(candyPrefab.name, randomPosition, Quaternion.identity);
+            Vector3 randomPosition = new Vector3(Random.Range(-7, 7), Random.Range(-7, 7), candyPrefab.transform.position.z);
 
-                isCandyCollected = false;
-            }
-
-            yield return null;
+            // Solo el MasterClient instancia el nuevo caramelo en red
+            PhotonNetwork.Instantiate(candyPrefab.name, randomPosition, Quaternion.identity);
         }
     }
 }

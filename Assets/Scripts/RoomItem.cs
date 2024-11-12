@@ -1,19 +1,10 @@
-using System.Collections;
-using System.Collections.Generic;
 using Photon.Pun;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class RoomItem : MonoBehaviour
 {
-    LobbyManager manager;
     public TMP_Text roomName;
-
-    void Start()
-    {
-        manager = FindObjectOfType<LobbyManager>();
-    }
 
     public void SetRoomName(string _roomName)
     {
@@ -22,7 +13,7 @@ public class RoomItem : MonoBehaviour
 
     public void OnClickItem()
     {
-        manager.JoinRoom();
+        PhotonNetwork.JoinRoom(roomName.text);
     }
 
 }

@@ -15,6 +15,9 @@ public class PlayerController : MonoBehaviourPunCallbacks
     int currentCandies;
     Rigidbody2D rb;
 
+    public SpriteRenderer playerAvatarImage;
+    public Sprite[] avatars;
+
     void Awake()
     {
         instance = this;
@@ -28,6 +31,12 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
         if (view.IsMine)
         {
+            int avatarIndex = (int)PhotonNetwork.LocalPlayer.CustomProperties["playerAvatar"];
+            photonView.RPC("RPC_UpdateAvatar", RpcTarget.AllBuffered, avatarIndex);
+        }
+
+        if (view.IsMine)
+        {
             PhotonNetwork.LocalPlayer.NickName = PlayerPrefs.GetString("PlayerName", "Player");
             playerName.text = PhotonNetwork.LocalPlayer.NickName;
         }
@@ -35,6 +44,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             playerName.text = view.Owner.NickName;
         }
+
         Debug.Log("Nombre del jugador asignado: " + playerName.text);
     }
 
@@ -65,14 +75,31 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             view.RPC("RPC_IncreaseCandies", RpcTarget.AllBuffered);
         }
+
+        if (PhotonNetwork.IsMasterClient)
+        {
+            PhotonNetwork.Destroy(other.gameObject);
+        }
     }
 
-    // Método llamado solo en el jugador local
     public void IncreaseCandies()
     {
         if (view.IsMine)
         {
             view.RPC("RPC_IncreaseCandies", RpcTarget.AllBuffered);
+        }
+    }
+
+    [PunRPC]
+    void RPC_UpdateAvatar(int avatarIndex)
+    {
+        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
+        {
+            playerAvatarImage.sprite = avatars[avatarIndex];
+        }
+        else
+        {
+            Debug.LogError("Índice de avatar fuera de rango.");
         }
     }
 
@@ -83,12 +110,23 @@ public class PlayerController : MonoBehaviourPunCallbacks
         candyText.text = currentCandies.ToString();
     }
 
-    // Escuchar y actualizar el nombre si cambia después de la conexión
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
         if (targetPlayer == view.Owner && changedProps.ContainsKey("NickName"))
         {
             playerName.text = targetPlayer.NickName;
+        }
+    }
+
+    public void SetAvatar(int avatarIndex)
+    {
+        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
+        {
+            playerAvatarImage.sprite = avatars[avatarIndex];
+        }
+        else
+        {
+            Debug.LogError("Índice de avatar fuera de rango.");
         }
     }
 }
