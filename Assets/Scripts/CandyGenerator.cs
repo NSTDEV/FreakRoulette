@@ -18,29 +18,25 @@ public class CandyGenerator : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
+        // Asegurarse de que solo el jugador que colisiona aumente los caramelos
+        if (other.CompareTag("Player") && other.GetComponent<PhotonView>().IsMine)
         {
-            PhotonView playerPhotonView = other.GetComponent<PhotonView>();
-            if (playerPhotonView != null && playerPhotonView.IsMine)
+            // Incrementa los caramelos solo si el jugador es local
+            PlayerController playerController = other.GetComponent<PlayerController>();
+            if (playerController != null)
             {
-                PlayerController playerController = other.GetComponent<PlayerController>();
-                if (playerController != null)
-                {
-                    playerController.IncreaseCandies();
-                }
+                playerController.RPC_IncreaseCandies();
             }
         }
     }
 
-    IEnumerator RespawnCandy()
+    // Coroutine para generar caramelos periódicamente
+    private IEnumerator RespawnCandy()
     {
         while (true)
         {
             yield return new WaitForSeconds(respawnTime);
-
             Vector3 randomPosition = new Vector3(Random.Range(-7, 7), Random.Range(-7, 7), candyPrefab.transform.position.z);
-
-            // Solo el MasterClient instancia el nuevo caramelo en red
             PhotonNetwork.Instantiate(candyPrefab.name, randomPosition, Quaternion.identity);
         }
     }

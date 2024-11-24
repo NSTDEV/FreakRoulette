@@ -6,17 +6,21 @@ using Photon.Realtime;
 public class PlayerController : MonoBehaviourPunCallbacks
 {
     public static PlayerController instance;
-    public PhotonView view;
-    public float mSpeed;
-    float speedX, speedY;
-    Vector2 mVector;
 
+    [Header("Movimiento")]
+    public float moveSpeed = 5;
+    private Vector2 mInput;
+    private Rigidbody2D rb;
+
+    [Header("UI")]
     public TMP_Text candyText, playerName;
-    int currentCandies;
-    Rigidbody2D rb;
+    private int currentCandies;
 
+    [Header("Avatar")]
     public SpriteRenderer playerAvatarImage;
     public Sprite[] avatars;
+
+    private PhotonView view;
 
     void Awake()
     {
@@ -26,26 +30,9 @@ public class PlayerController : MonoBehaviourPunCallbacks
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        candyText.text = currentCandies.ToString();
         view = GetComponent<PhotonView>();
 
-        if (view.IsMine)
-        {
-            int avatarIndex = (int)PhotonNetwork.LocalPlayer.CustomProperties["playerAvatar"];
-            photonView.RPC("RPC_UpdateAvatar", RpcTarget.AllBuffered, avatarIndex);
-        }
-
-        if (view.IsMine)
-        {
-            PhotonNetwork.LocalPlayer.NickName = PlayerPrefs.GetString("PlayerName", "Player");
-            playerName.text = PhotonNetwork.LocalPlayer.NickName;
-        }
-        else
-        {
-            playerName.text = view.Owner.NickName;
-        }
-
-        Debug.Log("Nombre del jugador asignado: " + playerName.text);
+        InitializePlayer();
     }
 
     void Update()
@@ -58,40 +45,61 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     void FixedUpdate()
     {
-        rb.velocity = mVector * mSpeed;
+        rb.velocity = mInput * moveSpeed;
     }
 
     void ProcessInputs()
     {
-        speedX = Input.GetAxisRaw("Horizontal");
-        speedY = Input.GetAxisRaw("Vertical");
+        mInput.x = Input.GetAxisRaw("Horizontal");
+        mInput.y = Input.GetAxisRaw("Vertical");
 
-        mVector = new Vector2(speedX, speedY).normalized;
+        mInput.Normalize();
+    }
+
+    private void InitializePlayer()
+    {
+        if (view.IsMine)
+        {
+            playerName.text = PlayerPrefs.GetString("PlayerName", "Player");
+            PhotonNetwork.LocalPlayer.NickName = playerName.text;
+
+            int avatarIndex = GetAvatarIndex();
+            photonView.RPC(nameof(RPC_UpdateAvatar), RpcTarget.AllBuffered, avatarIndex);
+        }
+        else
+        {
+            playerName.text = view.Owner.NickName;
+        }
+
+        candyText.text = currentCandies.ToString();
+        Debug.Log("Nombre del jugador asignado: " + playerName.text);
+    }
+
+    private int GetAvatarIndex()
+    {
+        return PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("playerAvatar", out var avatarIndex)
+            ? (int)avatarIndex
+            : 0; // Si no se encuentra el avatar, usar 0 por defecto
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.gameObject.tag == "Candy" && view.IsMine)
+        if (view.IsMine && other.CompareTag("Candy"))
         {
-            view.RPC("RPC_IncreaseCandies", RpcTarget.AllBuffered);
-        }
-
-        if (PhotonNetwork.IsMasterClient)
-        {
-            PhotonNetwork.Destroy(other.gameObject);
+            CollectCandy(other.gameObject);
         }
     }
 
-    public void IncreaseCandies()
+    private void CollectCandy(GameObject candy)
     {
-        if (view.IsMine)
-        {
-            view.RPC("RPC_IncreaseCandies", RpcTarget.AllBuffered);
-        }
+        view.RPC(nameof(RPC_IncreaseCandies), RpcTarget.AllBuffered);
+
+        if (PhotonNetwork.IsMasterClient)
+            PhotonNetwork.Destroy(candy);
     }
 
     [PunRPC]
-    void RPC_UpdateAvatar(int avatarIndex)
+    public void RPC_UpdateAvatar(int avatarIndex)
     {
         if (avatarIndex >= 0 && avatarIndex < avatars.Length)
         {
@@ -104,7 +112,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     }
 
     [PunRPC]
-    void RPC_IncreaseCandies()
+    public void RPC_IncreaseCandies()
     {
         currentCandies++;
         candyText.text = currentCandies.ToString();
@@ -115,18 +123,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
         if (targetPlayer == view.Owner && changedProps.ContainsKey("NickName"))
         {
             playerName.text = targetPlayer.NickName;
-        }
-    }
-
-    public void SetAvatar(int avatarIndex)
-    {
-        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
-        {
-            playerAvatarImage.sprite = avatars[avatarIndex];
-        }
-        else
-        {
-            Debug.LogError("Índice de avatar fuera de rango.");
         }
     }
 }

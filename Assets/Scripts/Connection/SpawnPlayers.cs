@@ -20,7 +20,7 @@ public class SpawnPlayers : MonoBehaviourPunCallbacks
             PlayerController playerController = spawnedPlayer.GetComponent<PlayerController>();
             if (playerController != null)
             {
-                playerController.SetAvatar(avatarIndex);
+                playerController.RPC_UpdateAvatar(avatarIndex);
             }
         }
         else
