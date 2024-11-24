@@ -14,6 +14,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     [Header("UI")]
     public TMP_Text candyText, playerName;
+    public Animator animatorController;
     private int currentCandies;
 
     [Header("Avatar")]
@@ -46,6 +47,15 @@ public class PlayerController : MonoBehaviourPunCallbacks
     void FixedUpdate()
     {
         rb.velocity = mInput * moveSpeed;
+
+        if (rb.velocity.magnitude > 0.1f)
+        {
+            animatorController.SetBool("Walking", true);
+        }
+        else
+        {
+            animatorController.SetBool("Walking", false);
+        }
     }
 
     void ProcessInputs()
@@ -124,5 +134,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             playerName.text = targetPlayer.NickName;
         }
+    }
+    public bool Failed
+    {
+        get => animatorController.GetBool("Failed");
+        set => animatorController.SetBool("Failed", value);
     }
 }

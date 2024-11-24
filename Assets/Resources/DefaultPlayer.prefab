@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 1183573414354059085}
   - component: {fileID: 658987544633089159}
   - component: {fileID: 6518192511358306457}
+  - component: {fileID: 1357995707484935566}
   m_Layer: 0
   m_Name: PlayerAvatar
   m_TagString: Untagged
@@ -122,6 +123,22 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1357995707484935566
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 830514487727075280}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b8c4a61274f60b4ea5fb4299cfdbf14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowLayerWeightsInspector: 1
+  ShowParameterInspector: 1
+  m_SynchronizeParameters: []
+  m_SynchronizeLayers: []
 --- !u!1 &1951152631099616236
 GameObject:
   m_ObjectHideFlags: 0
@@ -220,7 +237,6 @@ GameObject:
   - component: {fileID: 8340632380445173215}
   - component: {fileID: 679445346379421645}
   - component: {fileID: -2669370250046232906}
-  - component: {fileID: -3571214422928673250}
   m_Layer: 0
   m_Name: DefaultPlayer
   m_TagString: Player
@@ -237,7 +253,7 @@ Transform:
   m_GameObject: {fileID: 4269040623194578316}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -2}
+  m_LocalPosition: {x: 0, y: 0, z: -4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -334,6 +350,7 @@ MonoBehaviour:
   moveSpeed: 5
   candyText: {fileID: 5160945775300235321}
   playerName: {fileID: 3880428062645300969}
+  animatorController: {fileID: 6518192511358306457}
   playerAvatarImage: {fileID: 1183573414354059085}
   avatars:
   - {fileID: 21300000, guid: 4332fb9d4769f5443858943f9d3e3fae, type: 3}
@@ -361,7 +378,7 @@ MonoBehaviour:
   observableSearch: 2
   ObservedComponents:
   - {fileID: -2669370250046232906}
-  - {fileID: -3571214422928673250}
+  - {fileID: 1357995707484935566}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -398,22 +415,6 @@ MonoBehaviour:
     InterpolateOption: 0
     InterpolateMoveTowardsSpeed: 1
     InterpolateLerpSpeed: 0
---- !u!114 &-3571214422928673250
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4269040623194578316}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9b8c4a61274f60b4ea5fb4299cfdbf14, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ShowLayerWeightsInspector: 1
-  ShowParameterInspector: 1
-  m_SynchronizeParameters: []
-  m_SynchronizeLayers: []
 --- !u!1 &6379168682773685336
 GameObject:
   m_ObjectHideFlags: 0

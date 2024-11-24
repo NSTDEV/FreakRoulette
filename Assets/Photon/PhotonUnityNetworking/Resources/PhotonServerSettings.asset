@@ -45,6 +45,8 @@ MonoBehaviour:
   - SyncRotation
   - HandleVersusOutcome
   - MoveToVersus
+  - ReturnToGameScene
+  - NotifyVersusSceneLoaded
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
