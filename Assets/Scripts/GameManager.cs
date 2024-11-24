@@ -207,7 +207,6 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
-
     private IEnumerator HandlePlayerDeath()
     {
         yield return new WaitForSeconds(3f);
