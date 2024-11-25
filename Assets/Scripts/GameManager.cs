@@ -3,6 +3,7 @@ using Photon.Pun;
 using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections;
+using System.Collections.Generic;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
@@ -11,9 +12,15 @@ public class GameManager : MonoBehaviourPunCallbacks
     public float transitionDuration = 1.5f;
     public float roundDuration = 40f;
     private float timer;
+   
+    public GameObject scoreTablePanel; // Referencia al panel donde se mostrarán los puntajes
+    public TMP_Text playerScorePrefab; // Prefab de texto para cada jugador (debe ser un TextMeshProUGUI)
+    private List<PlayerScore> playerScores = new List<PlayerScore>(); // Lista para almacenar la información de los jugadores
+        
 
     private bool hasSceneChanged = false; // Bandera para evitar múltiples transiciones
 
+    
     void Awake()
     {
         if (FindObjectsOfType<GameManager>().Length > 1)
@@ -45,8 +52,40 @@ public class GameManager : MonoBehaviourPunCallbacks
             SelectPlayerForVersus();
             StartCoroutine(StartGameWithTransition("Versus"));
         }
+        UpdateScoreTable();
+    }
+    //----------------------------------//
+    // Método para actualizar la tabla de puntuaciones
+void UpdateScoreTable()
+{
+    playerScores.Clear(); // Limpiamos la lista antes de llenarla nuevamente
+
+    // Recopilamos la información de los jugadores
+    foreach (var player in PhotonNetwork.PlayerList)
+    {
+        if (player.CustomProperties.ContainsKey("Score"))
+        {
+            int score = (int)player.CustomProperties["Score"];
+            playerScores.Add(new PlayerScore(player.NickName, score));
+        }
     }
 
+    // Ordenamos usando Bubble Sort
+    BubbleSort(playerScores);
+
+    // Limpiamos el panel y creamos nuevos elementos en orden
+    foreach (Transform child in scoreTablePanel.transform)
+    {
+        Destroy(child.gameObject); // Eliminamos elementos previos
+    }
+
+    foreach (var playerScore in playerScores)
+    {
+        TMP_Text scoreText = Instantiate(playerScorePrefab, scoreTablePanel.transform);
+        scoreText.text = $"{playerScore.playerName}: {playerScore.score}";
+    }
+}
+    //----------------------------------------------------//
     void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded; // Limpia el evento
@@ -214,4 +253,38 @@ public class GameManager : MonoBehaviourPunCallbacks
         PhotonNetwork.LeaveRoom();
         SceneManager.LoadScene("Lobby");
     }
+
+    //---------------------------------//
+    // Clase para almacenar el nombre y la puntuación del jugador
+public class PlayerScore
+{
+    public string playerName;
+    public int score;
+
+    public PlayerScore(string name, int score)
+    {
+        this.playerName = name;
+        this.score = score;
+    }
+}
+// Implementación del algoritmo de ordenamiento Bubble Sort
+void BubbleSort(List<PlayerScore> list)
+{
+    int n = list.Count;
+    for (int i = 0; i < n - 1; i++)
+    {
+        for (int j = 0; j < n - 1 - i; j++)
+        {
+            if (list[j].score < list[j + 1].score)
+            {
+                // Intercambiar los elementos
+                PlayerScore temp = list[j];
+                list[j] = list[j + 1];
+                list[j + 1] = temp;
+            }
+        }
+    }
+}
+
+
 }
