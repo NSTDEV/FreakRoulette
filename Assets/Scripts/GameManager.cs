@@ -6,24 +6,32 @@ using System.Collections;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
-    public TMP_Text timerText;
-    public Animator transitionAnimator;
-    public float transitionDuration = 1.5f;
+    private static GameManager instance; // Singleton
+
+    [Header("Timer")]
     public float roundDuration = 40f;
+    public TMP_Text timerText;
     private float timer;
 
-    private bool hasSceneChanged = false; // Bandera para evitar múltiples transiciones
+    [Header("Transition")]
+    public Animator transitionAnimator;
+    public float transitionDuration = 1.5f;
+
+    private bool isTransitioning = false; // Flag para evitar transiciones múltiples
 
     void Awake()
     {
-        if (FindObjectsOfType<GameManager>().Length > 1)
+        if (instance == null)
         {
-            Destroy(gameObject);
+            instance = this;
+            DontDestroyOnLoad(gameObject); // Evita que se destruya al cambiar de escena
+            SceneManager.sceneLoaded += OnSceneLoaded; // Escuchar cuando se carga una nueva escena
+        }
+        else if (instance != this)
+        {
+            Destroy(gameObject); // Destruir duplicados
             return;
         }
-
-        DontDestroyOnLoad(gameObject);
-        SceneManager.sceneLoaded += OnSceneLoaded; // Escucha cambios de escena
     }
 
     void Start()
@@ -33,185 +41,92 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     void Update()
     {
-        if (hasSceneChanged) return; // Evita ejecutar el cambio de escena más de una vez
+        if (isTransitioning) return; // Evitar actualizaciones mientras se está en transición
 
         timer -= Time.deltaTime;
-        timerText.text = timer.ToString("F0");
+        timerText.text = Mathf.Max(0, timer).ToString("F0");
 
         if (timer <= 0)
         {
-            timer = 0;
-            hasSceneChanged = true; // Marca que ya se procesó el cambio
-            SelectPlayerForVersus();
-            StartCoroutine(StartGameWithTransition("Versus"));
+            HandleSceneTransition();
         }
     }
 
-    void OnDestroy()
+    private void HandleSceneTransition()
     {
-        SceneManager.sceneLoaded -= OnSceneLoaded; // Limpia el evento
+        string currentScene = SceneManager.GetActiveScene().name;
+
+        // Si ya se está en transición, no hacer nada
+        if (isTransitioning) return;
+
+        isTransitioning = true; // Iniciar transición
+
+        switch (currentScene)
+        {
+            case "Game":
+                StartCoroutine(StartSceneWithTransition("Versus"));
+                break;
+
+            case "Versus":
+                StartCoroutine(StartSceneWithTransition("Game"));
+                break;
+
+            default:
+                Debug.LogWarning("Escena desconocida: " + currentScene);
+                break;
+        }
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "Lobby")
+        if (scene.name == "Game" && timer <= 0)
         {
-            Destroy(gameObject); // Destruye el GameManager al entrar al Lobby
+            // Reinicia el temporizador si vuelves a la escena "Game"
+            timer = roundDuration;
         }
+        // Reiniciar el temporizador cuando entres en la escena "Versus"
         else if (scene.name == "Versus")
         {
-            // Asegura que todos los jugadores estén listos en la escena Versus
-            photonView.RPC(nameof(NotifyVersusSceneLoaded), RpcTarget.All);
-        }
-    }
-
-    void SelectPlayerForVersus()
-    {
-        Photon.Realtime.Player playerWithLowestScore = null;
-        int lowestScore = int.MaxValue;
-
-        foreach (var player in PhotonNetwork.PlayerList)
-        {
-            if (player.CustomProperties.ContainsKey("Score"))
-            {
-                int playerScore = (int)player.CustomProperties["Score"];
-                if (playerScore < lowestScore)
-                {
-                    lowestScore = playerScore;
-                    playerWithLowestScore = player;
-                }
-            }
+            timer = 10f; // Reiniciar temporizador para "Versus"
         }
 
-        if (playerWithLowestScore != null)
+        // Eliminar GameManager al entrar en la escena de Lobby
+        if (scene.name == "Lobby")
         {
-            AssignVersusRole(playerWithLowestScore);
-        }
-    }
-
-    void AssignVersusRole(Photon.Realtime.Player player)
-    {
-        player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
-        {
-            { "IsVersus", true }
-        });
-
-        photonView.RPC(nameof(MoveToVersus), RpcTarget.All, player.UserId);
-    }
-
-    [PunRPC]
-    void MoveToVersus(string userId)
-    {
-        if (PhotonNetwork.LocalPlayer.UserId == userId)
-        {
-            // Verifica si el jugador ya está presente en la escena "Versus"
-            GameObject existingPlayer = GameObject.FindWithTag("Player");
-            if (existingPlayer != null)
-            {
-                Debug.Log("El jugador ya está presente en la escena Versus, evitando duplicación.");
-                return; // Si ya existe el jugador, no lo duplicamos
-            }
-
-            // Si no existe, crea el jugador
-            Debug.Log("Instanciando jugador en la escena Versus.");
-            PhotonNetwork.Instantiate("PlayerPrefab", Vector3.zero, Quaternion.identity); // Ajusta la posición si es necesario
-
-            // Simula un 50/50 para ganar o perder
-            bool survived = Random.value > 0.5f;
-
-            if (!survived)
-            {
-                Debug.Log("Has perdido el versus.");
-                var localPlayerScript = GetLocalPlayerScript();
-                if (localPlayerScript != null)
-                {
-                    localPlayerScript.Failed = true; // Activa el estado de muerte
-                }
-                StartCoroutine(HandlePlayerDeath());
-            }
-            else
-            {
-                StartCoroutine(HandleVersusScene());
-            }
-        }
-        else
-        {
-            Debug.Log($"Jugador {userId} fue elegido para Versus. Permanecerás en la escena actual.");
-        }
-    }
-
-    private PlayerController GetLocalPlayerScript()
-    {
-        GameObject localPlayer = GameObject.FindWithTag("Player");
-        if (localPlayer != null)
-        {
-            return localPlayer.GetComponent<PlayerController>();
-        }
-        return null;
-    }
-
-    private IEnumerator HandleVersusScene()
-    {
-        yield return new WaitForSeconds(6f);
-
-        foreach (var player in PhotonNetwork.PlayerList)
-        {
-            player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
-            {
-                { "Score", 0 }
-            });
+            Destroy(gameObject); // Eliminar el GameManager persistente al entrar en el Lobby
         }
 
-        timer = roundDuration;
-
-        photonView.RPC(nameof(ReturnToGameScene), RpcTarget.All); // Notifica a todos para regresar
+        isTransitioning = false; // Finalizar la transición
     }
 
-    [PunRPC]
-    private void ReturnToGameScene()
+    public void ChangeToLobby()
     {
-        StartCoroutine(StartGameWithTransition("Game"));
-    }
-
-    [PunRPC]
-    private void NotifyVersusSceneLoaded()
-    {
-        // Notifica a todos los jugadores que la escena Versus ha cargado
-        Debug.Log("La escena Versus ha cargado correctamente.");
-    }
-
-    public void LeaveToLobby()
-    {
-        // Asegura que todos los jugadores dejen la sala y vuelvan al lobby
-        PhotonNetwork.LeaveRoom();
-        StartCoroutine(StartGameWithTransition("Lobby"));
-    }
-
-    private IEnumerator StartGameWithTransition(string levelName)
-    {
-        if (transitionAnimator != null)
-        {
-            transitionAnimator.ResetTrigger("Start");
-            transitionAnimator.SetTrigger("Start");
-        }
-
-        yield return new WaitForSeconds(transitionDuration);
-
-        PhotonNetwork.LoadLevel(levelName);
-        yield return null;
+        StopAllCoroutines(); // Detener cualquier corrutina en curso
 
         if (transitionAnimator != null)
         {
-            transitionAnimator.ResetTrigger("Start");
-            transitionAnimator.Play("TransitionIn");
+            transitionAnimator.SetTrigger("SceneEnter"); // Activar la animación de transición
         }
+
+        PhotonNetwork.LeaveRoom(); // Salir de la sala de Photon
+        StartCoroutine(TransitionToLobby());
     }
 
-    private IEnumerator HandlePlayerDeath()
+    private IEnumerator TransitionToLobby()
     {
-        yield return new WaitForSeconds(3f);
+        yield return new WaitForSeconds(transitionDuration); // Esperar a que termine la animación
+        SceneManager.LoadScene("Lobby"); // Cargar la escena de Lobby
+    }
 
-        PhotonNetwork.LeaveRoom();
-        SceneManager.LoadScene("Lobby");
+    public IEnumerator StartSceneWithTransition(string sceneName)
+    {
+        if (transitionAnimator != null)
+        {
+            transitionAnimator.SetTrigger("SceneEnter"); // Activar animación
+            yield return new WaitForSeconds(transitionDuration); // Esperar la duración de la transición
+
+            PhotonNetwork.LoadLevel(sceneName); // Cambiar de escena con Photon
+            transitionAnimator.SetTrigger("SceneExit"); // Activar animación de salida
+        }
     }
 }

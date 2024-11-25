@@ -365,8 +365,8 @@ MonoBehaviour:
   avatars:
   - {fileID: 21300000, guid: 4332fb9d4769f5443858943f9d3e3fae, type: 3}
   - {fileID: 21300000, guid: a1606ce2bccfb784f8cfcf3d58b4a707, type: 3}
-  - {fileID: 21300000, guid: f446927c770bdb04888ffc8efc48e498, type: 3}
   - {fileID: 21300000, guid: cb3229a81bc6c944ba7399f61dae67fe, type: 3}
+  - {fileID: 21300000, guid: f446927c770bdb04888ffc8efc48e498, type: 3}
   - {fileID: 21300000, guid: 41dd3b642f509ae42a945f63c26a16c1, type: 3}
   leftArrow: {fileID: 7926732848281974222}
   rightArrow: {fileID: 2766161509489101641}
