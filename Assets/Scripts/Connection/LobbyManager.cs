@@ -2,8 +2,8 @@ using TMPro;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
 
 public class LobbyManager : MonoBehaviourPunCallbacks
 {
@@ -12,7 +12,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public GameObject lobbyPanel, roomPanel, playButton;
     public TMP_Text roomName, playerName;
     public Transform roomListParent, playerListParent;
-    public Animator transitionAnimator; // Animator con el trigger "Start"
+    public Animator transitionAnimator;
     public float transitionDuration = 1.1f;
 
     [Header("Prefabs")]
@@ -24,8 +24,8 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public float updateInterval = 1.5f;
 
     private float nextUpdateTime;
-    private List<RoomItem> roomItems = new();
-    private List<PlayerItem> playerItems = new();
+    private readonly List<RoomItem> roomItems = new();
+    private readonly List<PlayerItem> playerItems = new();
 
     private void Awake()
     {
@@ -36,32 +36,32 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     private void Start() => PhotonNetwork.JoinLobby();
 
-    private void Update()
-    {
-        playButton.SetActive(PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom?.PlayerCount >= 1);
-    }
+    private void Update() => playButton.SetActive(PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom?.PlayerCount > 0);
 
     public void CreateRoom()
     {
-        if (nameInput.text.Length > 0)
+        if (!string.IsNullOrWhiteSpace(nameInput.text))
+        {
             PhotonNetwork.CreateRoom(nameInput.text, new RoomOptions { MaxPlayers = (byte)maxPlayers });
+        }
     }
 
-    public void JoinRoom() => PhotonNetwork.JoinRoom(nameInput.text);
+    public void JoinRoom()
+    {
+        if (!string.IsNullOrWhiteSpace(nameInput.text))
+        {
+            PhotonNetwork.JoinRoom(nameInput.text);
+        }
+    }
 
     public void LeaveRoom() => PhotonNetwork.LeaveRoom();
 
-    public void StartGame()
-    {
-        StartCoroutine(StartGameWithTransition());
-    }
+    public void StartGame() => StartCoroutine(StartGameWithTransition());
 
     private IEnumerator StartGameWithTransition()
     {
-        transitionAnimator.SetTrigger("Start");
-
+        transitionAnimator.SetTrigger("SceneEnter");
         yield return new WaitForSeconds(transitionDuration);
-
         PhotonNetwork.LoadLevel("Game");
     }
 
@@ -83,7 +83,8 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     {
         if (Time.time < nextUpdateTime) return;
 
-        ClearList(roomItems);
+        RefreshList(roomItems, roomListParent);
+
         foreach (RoomInfo room in roomList)
         {
             if (!room.RemovedFromList)
@@ -104,22 +105,19 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.CurrentRoom == null) return;
 
-        ClearList(playerItems);
+        RefreshList(playerItems, playerListParent);
+
         foreach (Player player in PhotonNetwork.PlayerList)
         {
             PlayerItem newPlayer = Instantiate(playerItemPrefab, playerListParent);
-            newPlayer.SetPlayerInfo(player);
-
-            if (player == PhotonNetwork.LocalPlayer)
-                newPlayer.ApplyLocalChanges();
-
+            newPlayer.SetPlayerInfo(player); // Solo se asigna la información básica
             playerItems.Add(newPlayer);
         }
     }
 
-    private void ClearList<T>(List<T> list) where T : MonoBehaviour
+    private void RefreshList<T>(List<T> list, Transform parent) where T : MonoBehaviour
     {
-        foreach (var item in list)
+        foreach (T item in list)
             Destroy(item.gameObject);
 
         list.Clear();

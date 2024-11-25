@@ -295,6 +295,7 @@ GameObject:
   - component: {fileID: 202191060}
   - component: {fileID: 202191059}
   - component: {fileID: 202191058}
+  - component: {fileID: 202191061}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -326,7 +327,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45dd55f9ea740044a8c3c84496499e83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  roundDuration: 5
+  roundDuration: 15
   timerText: {fileID: 1458750967}
   transitionAnimator: {fileID: 747954170}
   transitionDuration: 1.5
@@ -349,6 +350,28 @@ Transform:
   - {fileID: 747954171}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &202191061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 202191057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 2
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!1 &493895171
 GameObject:
   m_ObjectHideFlags: 0
@@ -878,7 +901,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 645072823819476150, guid: 597e813825fb29149bedc7e3da40f3eb, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: 16.13
       objectReference: {fileID: 0}
     - target: {fileID: 645072823819476150, guid: 597e813825fb29149bedc7e3da40f3eb, type: 3}
       propertyPath: m_LocalPosition.y

@@ -8,9 +8,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
     public static PlayerController instance;
 
     [Header("Movimiento")]
-    public float moveSpeed = 5;
+    public float moveSpeed = 5f;
     private Vector2 mInput;
     private Rigidbody2D rb;
+    private bool canMove = true; // Nueva variable para controlar el movimiento
 
     [Header("UI")]
     public TMP_Text candyText, playerName;
@@ -23,89 +24,112 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private PhotonView view;
 
-    void Awake()
-    {
-        instance = this;
-    }
+    private void Awake() => instance = this;
 
-    void Start()
+    private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         view = GetComponent<PhotonView>();
-
         InitializePlayer();
     }
 
-    void Update()
+    private void Update()
     {
-        if (view.IsMine)
+        if (view.IsMine && canMove) // Solo procesar inputs si el movimiento está habilitado
         {
             ProcessInputs();
         }
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
-        rb.velocity = mInput * moveSpeed;
-
-        if (rb.velocity.magnitude > 0.1f)
+        if (canMove) // Solo mover al jugador si puede moverse
         {
-            animatorController.SetBool("Walking", true);
+            rb.velocity = mInput * moveSpeed;
         }
-        else
+
+        animatorController.SetBool("Walking", rb.velocity.sqrMagnitude > 0.01f);
+
+        if (mInput.x != 0)
         {
-            animatorController.SetBool("Walking", false);
+            playerAvatarImage.flipX = mInput.x > 0;
         }
     }
 
-    void ProcessInputs()
+    private void ProcessInputs()
     {
-        mInput.x = Input.GetAxisRaw("Horizontal");
-        mInput.y = Input.GetAxisRaw("Vertical");
-
-        mInput.Normalize();
+        mInput = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
     }
 
     private void InitializePlayer()
     {
+        playerName.text = view.IsMine
+            ? PlayerPrefs.GetString("PlayerName", "Player")
+            : view.Owner.NickName;
+
         if (view.IsMine)
         {
-            playerName.text = PlayerPrefs.GetString("PlayerName", "Player");
             PhotonNetwork.LocalPlayer.NickName = playerName.text;
-
             int avatarIndex = GetAvatarIndex();
             photonView.RPC(nameof(RPC_UpdateAvatar), RpcTarget.AllBuffered, avatarIndex);
         }
-        else
-        {
-            playerName.text = view.Owner.NickName;
-        }
 
-        candyText.text = currentCandies.ToString();
-        Debug.Log("Nombre del jugador asignado: " + playerName.text);
+        RPC_SyncCandies(0);
     }
 
     private int GetAvatarIndex()
     {
         return PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("playerAvatar", out var avatarIndex)
             ? (int)avatarIndex
-            : 0; // Si no se encuentra el avatar, usar 0 por defecto
+            : 0;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (view.IsMine && other.CompareTag("Candy"))
+        if (other.CompareTag("Candy"))
         {
-            CollectCandy(other.gameObject);
+            PhotonView candyPhotonView = other.GetComponent<PhotonView>();
+            if (candyPhotonView == null)
+            {
+                Debug.LogError("El objeto 'Candy' no tiene un PhotonView asignado.");
+                return;
+            }
+
+            if (candyPhotonView.IsMine || PhotonNetwork.IsMasterClient)
+            {
+                CollectCandy(other.gameObject);
+            }
         }
     }
 
     private void CollectCandy(GameObject candy)
     {
-        view.RPC(nameof(RPC_IncreaseCandies), RpcTarget.AllBuffered);
+        RPC_IncreaseCandies();
 
         if (PhotonNetwork.IsMasterClient)
-            PhotonNetwork.Destroy(candy);
+        {
+            PhotonView candyPhotonView = candy.GetComponent<PhotonView>();
+
+            if (candyPhotonView != null && candyPhotonView.IsMine)
+            {
+                photonView.RPC(nameof(RPC_DestroyCandy), RpcTarget.All, candyPhotonView.ViewID);
+            }
+        }
+    }
+
+    [PunRPC]
+    private void RPC_DestroyCandy(int viewID)
+    {
+        PhotonView candyPhotonView = PhotonView.Find(viewID);
+
+        if (candyPhotonView != null && candyPhotonView.gameObject != null)
+        {
+            Destroy(candyPhotonView.gameObject); // Eliminar el objeto de manera segura
+        }
+        else
+        {
+            Debug.LogWarning("El caramelo ya fue destruido o no existe.");
+        }
     }
 
     [PunRPC]
@@ -115,29 +139,53 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             playerAvatarImage.sprite = avatars[avatarIndex];
         }
-        else
-        {
-            Debug.LogError("Índice de avatar fuera de rango.");
-        }
     }
 
     [PunRPC]
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
+
+        // Enviar actualización a todos los jugadores
+        photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
+
+        // Actualizar propiedades personalizadas
+        ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
+    {
+        { "Candies", currentCandies }
+    };
+        PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
+    }
+
+    [PunRPC]
+    private void RPC_SyncCandies(int candies)
+    {
+        currentCandies = candies;
         candyText.text = currentCandies.ToString();
     }
 
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
-        if (targetPlayer == view.Owner && changedProps.ContainsKey("NickName"))
+        if (targetPlayer == view.Owner && changedProps.TryGetValue("PlayerName", out var newName))
         {
-            playerName.text = targetPlayer.NickName;
+            playerName.text = (string)newName;
         }
     }
+
     public bool Failed
     {
         get => animatorController.GetBool("Failed");
         set => animatorController.SetBool("Failed", value);
+    }
+
+    // Métodos para habilitar y deshabilitar el movimiento
+    public void DisableMovement()
+    {
+        canMove = false; // Desactiva el movimiento
+    }
+
+    public void EnableMovement()
+    {
+        canMove = true; // Activa el movimiento
     }
 }

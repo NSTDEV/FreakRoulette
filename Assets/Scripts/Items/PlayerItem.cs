@@ -9,7 +9,7 @@ public class PlayerItem : MonoBehaviourPunCallbacks
     public Player player;
     public TMP_Text playerName;
     public Image playerAvatar;
-    public Sprite[] avatars; // Lista de avatares disponibles
+    public Sprite[] avatars;
     public GameObject leftArrow, rightArrow;
 
     private ExitGames.Client.Photon.Hashtable playerProperties = new ExitGames.Client.Photon.Hashtable();
@@ -18,7 +18,7 @@ public class PlayerItem : MonoBehaviourPunCallbacks
     {
         if (player == PhotonNetwork.LocalPlayer)
         {
-            ApplyLocalChanges(); // Aplica cambios solo si es el jugador local
+            ApplyLocalChanges();
         }
     }
 
@@ -27,66 +27,54 @@ public class PlayerItem : MonoBehaviourPunCallbacks
         player = _player;
         playerName.text = player.NickName;
 
-        // Si no hay un avatar asignado en las propiedades, inicialízalo
-        if (!player.CustomProperties.ContainsKey("playerAvatar"))
+        if (!player.CustomProperties.TryGetValue("playerAvatar", out _))
         {
-            playerProperties["playerAvatar"] = 0; // Avatar por defecto (índice 0)
-            player.SetCustomProperties(playerProperties);
+            SetAvatarIndex(0);
         }
 
-        UpdatePlayerItem(); // Actualiza la UI del jugador
+        UpdatePlayerItem();
     }
 
-    public void ApplyLocalChanges()
+    private void ApplyLocalChanges()
     {
         leftArrow.SetActive(true);
         rightArrow.SetActive(true);
     }
 
-    public void OnClickLeftArrow()
-    {
-        UpdateAvatarIndex(-1); // Disminuye el índice del avatar
-    }
+    public void OnClickLeftArrow() => UpdateAvatarIndex(-1);
 
-    public void OnClickRightArrow()
-    {
-        UpdateAvatarIndex(1); // Aumenta el índice del avatar
-    }
+    public void OnClickRightArrow() => UpdateAvatarIndex(1);
 
     private void UpdateAvatarIndex(int change)
     {
-        int currentAvatarIndex = (int)player.CustomProperties["playerAvatar"];
-        currentAvatarIndex = (currentAvatarIndex + change + avatars.Length) % avatars.Length; // Crea un ciclo en los avatares
-        playerProperties["playerAvatar"] = currentAvatarIndex;
+        int currentAvatarIndex = GetAvatarIndex();
+        currentAvatarIndex = (currentAvatarIndex + change + avatars.Length) % avatars.Length;
 
-        // Si el jugador es local, se actualiza sus propiedades
-        if (player == PhotonNetwork.LocalPlayer)
-        {
-            PhotonNetwork.LocalPlayer.SetCustomProperties(playerProperties); // Guarda los cambios en las propiedades del jugador local
-        }
-        else
-        {
-            player.SetCustomProperties(playerProperties);
-        }
+        SetAvatarIndex(currentAvatarIndex);
+    }
+
+    private int GetAvatarIndex() => (int)(player.CustomProperties["playerAvatar"] ?? 0);
+
+    private void SetAvatarIndex(int index)
+    {
+        playerProperties["playerAvatar"] = index;
+        player.SetCustomProperties(playerProperties);
     }
 
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
-        if (player == targetPlayer)
+        if (player == targetPlayer && changedProps.ContainsKey("playerAvatar"))
         {
-            UpdatePlayerItem(); // Actualiza la UI del jugador si es el mismo que ha cambiado las propiedades
+            UpdatePlayerItem();
         }
     }
 
-    void UpdatePlayerItem()
+    private void UpdatePlayerItem()
     {
-        if (player.CustomProperties.ContainsKey("playerAvatar"))
+        int avatarIndex = GetAvatarIndex();
+        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
         {
-            int avatarIndex = (int)player.CustomProperties["playerAvatar"];
-            if (avatarIndex >= 0 && avatarIndex < avatars.Length)
-            {
-                playerAvatar.sprite = avatars[avatarIndex]; // Cambia el avatar basado en el índice
-            }
+            playerAvatar.sprite = avatars[avatarIndex];
         }
     }
 }

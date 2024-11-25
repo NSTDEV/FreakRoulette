@@ -1,12 +1,14 @@
 using UnityEngine;
 using Photon.Pun;
-using UnityEngine.SceneManagement;
+using Photon.Realtime;
 using TMPro;
+using UnityEngine.SceneManagement;
 using System.Collections;
+using System.Linq;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
-    private static GameManager instance; // Singleton
+    private static GameManager instance;
 
     [Header("Timer")]
     public float roundDuration = 40f;
@@ -17,19 +19,27 @@ public class GameManager : MonoBehaviourPunCallbacks
     public Animator transitionAnimator;
     public float transitionDuration = 1.5f;
 
-    private bool isTransitioning = false; // Flag para evitar transiciones múltiples
+    private bool isTransitioning = false;
+    private string eliminationMessage = "";
 
     void Awake()
     {
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject); // Evita que se destruya al cambiar de escena
-            SceneManager.sceneLoaded += OnSceneLoaded; // Escuchar cuando se carga una nueva escena
+            DontDestroyOnLoad(gameObject);
+
+            PhotonView photonView = GetComponent<PhotonView>();
+            if (photonView == null)
+            {
+                Debug.LogWarning("PhotonView no encontrado en el GameManager. Añade un PhotonView al GameManager.");
+                Destroy(gameObject);
+                return;
+            }
         }
         else if (instance != this)
         {
-            Destroy(gameObject); // Destruir duplicados
+            Destroy(gameObject); // Destruye duplicados
             return;
         }
     }
@@ -41,7 +51,7 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     void Update()
     {
-        if (isTransitioning) return; // Evitar actualizaciones mientras se está en transición
+        if (isTransitioning) return;
 
         timer -= Time.deltaTime;
         timerText.text = Mathf.Max(0, timer).ToString("F0");
@@ -54,79 +64,189 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void HandleSceneTransition()
     {
-        string currentScene = SceneManager.GetActiveScene().name;
-
-        // Si ya se está en transición, no hacer nada
         if (isTransitioning) return;
 
-        isTransitioning = true; // Iniciar transición
+        isTransitioning = true;
+        string currentScene = SceneManager.GetActiveScene().name;
+
+        if (transitionAnimator == null)
+        {
+            Debug.LogError("transitionAnimator no está asignado.");
+            isTransitioning = false;
+            return;
+        }
 
         switch (currentScene)
         {
             case "Game":
-                StartCoroutine(StartSceneWithTransition("Versus"));
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    EliminatePlayerWithLowestPoints();
+                }
+
+                if (PhotonNetwork.IsConnected && photonView != null)
+                {
+                    photonView.RPC("StartSceneWithTransitionRPC", RpcTarget.All, "Versus");
+                }
+                else
+                {
+                    Debug.LogError("PhotonNetwork no está conectado o photonView es null.");
+                    isTransitioning = false;
+                }
                 break;
 
             case "Versus":
-                StartCoroutine(StartSceneWithTransition("Game"));
+                if (PhotonNetwork.IsConnected && photonView != null)
+                {
+                    photonView.RPC("DisplayEliminationMessageRPC", RpcTarget.AllBuffered);
+                    photonView.RPC("StartSceneWithTransitionRPC", RpcTarget.All, "Game");
+                }
+                else
+                {
+                    Debug.LogError("PhotonNetwork no está conectado o photonView es null.");
+                    isTransitioning = false;
+                }
                 break;
 
             default:
                 Debug.LogWarning("Escena desconocida: " + currentScene);
+                isTransitioning = false;
                 break;
         }
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "Game" && timer <= 0)
+        if (PhotonNetwork.IsMasterClient)
         {
-            // Reinicia el temporizador si vuelves a la escena "Game"
-            timer = roundDuration;
-        }
-        // Reiniciar el temporizador cuando entres en la escena "Versus"
-        else if (scene.name == "Versus")
-        {
-            timer = 10f; // Reiniciar temporizador para "Versus"
+            photonView.RPC("ResetTimerRPC", RpcTarget.AllBuffered);
         }
 
-        // Eliminar GameManager al entrar en la escena de Lobby
-        if (scene.name == "Lobby")
-        {
-            Destroy(gameObject); // Eliminar el GameManager persistente al entrar en el Lobby
-        }
+        isTransitioning = false;
+    }
 
-        isTransitioning = false; // Finalizar la transición
+    [PunRPC]
+    private void ResetTimerRPC()
+    {
+        timer = SceneManager.GetActiveScene().name == "Game" ? roundDuration : 10f;
     }
 
     public void ChangeToLobby()
     {
-        StopAllCoroutines(); // Detener cualquier corrutina en curso
-
-        if (transitionAnimator != null)
-        {
-            transitionAnimator.SetTrigger("SceneEnter"); // Activar la animación de transición
-        }
-
-        PhotonNetwork.LeaveRoom(); // Salir de la sala de Photon
+        StopAllCoroutines();
+        PhotonNetwork.LeaveRoom();
         StartCoroutine(TransitionToLobby());
     }
 
     private IEnumerator TransitionToLobby()
     {
-        yield return new WaitForSeconds(transitionDuration); // Esperar a que termine la animación
-        SceneManager.LoadScene("Lobby"); // Cargar la escena de Lobby
+        if (transitionAnimator != null)
+        {
+            transitionAnimator.SetTrigger("SceneEnter");
+            yield return new WaitForSeconds(transitionDuration);
+        }
+        else
+        {
+            Debug.LogError("transitionAnimator no está asignado.");
+        }
+
+        SceneManager.LoadScene("Lobby");
+
+        if (instance != null && instance.gameObject != null)
+        {
+            Destroy(gameObject);
+            instance = null;
+        }
     }
 
-    public IEnumerator StartSceneWithTransition(string sceneName)
+    [PunRPC]
+    public void StartSceneWithTransitionRPC(string sceneName)
     {
         if (transitionAnimator != null)
         {
-            transitionAnimator.SetTrigger("SceneEnter"); // Activar animación
-            yield return new WaitForSeconds(transitionDuration); // Esperar la duración de la transición
+            transitionAnimator.SetTrigger("SceneEnter");
+            StartCoroutine(LoadSceneWithDelay(sceneName));
+        }
+        else
+        {
+            Debug.LogError("transitionAnimator no está asignado.");
+        }
+    }
 
-            PhotonNetwork.LoadLevel(sceneName); // Cambiar de escena con Photon
-            transitionAnimator.SetTrigger("SceneExit"); // Activar animación de salida
+    private IEnumerator LoadSceneWithDelay(string sceneName)
+    {
+        yield return new WaitForSeconds(transitionDuration);
+
+        if (PhotonNetwork.IsConnected)
+        {
+            PhotonNetwork.LoadLevel(sceneName);
+        }
+        else
+        {
+            Debug.LogError("PhotonNetwork no está conectado.");
+        }
+
+        transitionAnimator.SetTrigger("SceneExit");
+    }
+
+    public void EliminatePlayerWithLowestPoints()
+    {
+        Player playerToEliminate = null;
+        int lowestPoints = int.MaxValue;
+
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            if (player.CustomProperties != null && player.CustomProperties.ContainsKey("Candies"))
+            {
+                int playerPoints = (int)player.CustomProperties["Candies"];
+
+                if (playerPoints < lowestPoints)
+                {
+                    lowestPoints = playerPoints;
+                    playerToEliminate = player;
+                }
+            }
+        }
+
+        if (playerToEliminate != null)
+        {
+            eliminationMessage = $"{playerToEliminate.NickName} ha sido eliminado con {lowestPoints} puntos.";
+            photonView.RPC("HandlePlayerEliminationRPC", RpcTarget.AllBuffered, playerToEliminate.UserId);
+        }
+        else
+        {
+            Debug.Log("No se encontró un jugador con puntos para eliminar.");
+        }
+    }
+
+    [PunRPC]
+    private void HandlePlayerEliminationRPC(string playerId)
+    {
+        Player playerToEliminate = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
+        if (playerToEliminate != null)
+        {
+            if (playerToEliminate.TagObject is PhotonView playerView)
+            {
+                PlayerController playerMovement = playerView.GetComponent<PlayerController>();
+                playerMovement?.DisableMovement();
+            }
+
+            var customProperties = new ExitGames.Client.Photon.Hashtable
+            {
+                { "IsEliminated", true }
+            };
+            playerToEliminate.SetCustomProperties(customProperties);
+
+            Debug.Log($"{playerToEliminate.NickName} ha sido eliminado.");
+        }
+    }
+
+    [PunRPC]
+    private void DisplayEliminationMessageRPC()
+    {
+        if (!string.IsNullOrEmpty(eliminationMessage))
+        {
+            Debug.Log(eliminationMessage);
         }
     }
 }

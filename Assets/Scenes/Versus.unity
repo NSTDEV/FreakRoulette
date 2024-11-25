@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 141031905}
   - component: {fileID: 141031907}
   - component: {fileID: 141031906}
-  - component: {fileID: 141031908}
   m_Layer: 0
   m_Name: FILTER3
   m_TagString: Untagged
@@ -230,21 +229,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!111 &141031908
-Animation:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 141031904}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Animation: {fileID: 7400000, guid: e1df6c77cd9c76e408a8847112c1090b, type: 2}
-  m_Animations: []
-  m_WrapMode: 0
-  m_PlayAutomatically: 1
-  m_AnimatePhysics: 0
-  m_CullingType: 0
 --- !u!1 &298215958
 GameObject:
   m_ObjectHideFlags: 0
@@ -1383,8 +1367,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 4269040623194578316, guid: 81520d6585d80cc4f800975d0ecfe044, type: 3}
-  minX: -8
-  maxX: 8
+  minX: 0
+  maxX: 0
   minY: -3.5
   maxY: 3.5
 --- !u!4 &1325636660
