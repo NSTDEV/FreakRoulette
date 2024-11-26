@@ -327,10 +327,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 45dd55f9ea740044a8c3c84496499e83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  roundDuration: 100
+  roundDuration: 10
   timerText: {fileID: 1458750967}
   transitionAnimator: {fileID: 747954170}
   transitionDuration: 1.5
+  playerPrefab: {fileID: 0}
+  playersContainer: {fileID: 0}
 --- !u!4 &202191060
 Transform:
   m_ObjectHideFlags: 0
