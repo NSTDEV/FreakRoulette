@@ -47,6 +47,17 @@ MonoBehaviour:
   - MoveToVersus
   - ReturnToGameScene
   - NotifyVersusSceneLoaded
+  - DeclareWinner
+  - StartVersus
+  - HandlePlayerDeath
+  - MarkAsSpectator
+  - HandlePlayerElimination
+  - RPC_SyncCandies
+  - RPC_DestroyCandy
+  - StartSceneWithTransitionRPC
+  - DisplayEliminationMessageRPC
+  - HandlePlayerEliminationRPC
+  - ResetTimerRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

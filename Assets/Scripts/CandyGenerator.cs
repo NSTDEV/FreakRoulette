@@ -25,18 +25,18 @@ public class CandyGenerator : MonoBehaviour
             PlayerController playerController = other.GetComponent<PlayerController>();
             if (playerController != null)
             {
+                // Llama a la RPC para asegurar que todos los jugadores reciban la actualización
                 playerController.RPC_IncreaseCandies();
             }
         }
     }
 
-    // Coroutine para generar caramelos periódicamente
     private IEnumerator RespawnCandy()
     {
         while (true)
         {
             yield return new WaitForSeconds(respawnTime);
-            Vector3 randomPosition = new Vector3(Random.Range(-7, 7), Random.Range(-7, 7), candyPrefab.transform.position.z);
+            Vector3 randomPosition = new Vector3(Random.Range(-7, 7), Random.Range(-3, 3), candyPrefab.transform.position.z);
             PhotonNetwork.Instantiate(candyPrefab.name, randomPosition, Quaternion.identity);
         }
     }
