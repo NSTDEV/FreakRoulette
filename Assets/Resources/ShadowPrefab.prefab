@@ -342,7 +342,6 @@ GameObject:
   - component: {fileID: 8213576565980669979}
   - component: {fileID: 4394481711777231161}
   - component: {fileID: 7521623423021044033}
-  - component: {fileID: 4170863787391941624}
   m_Layer: 0
   m_Name: ShadowSprite
   m_TagString: Untagged
@@ -440,18 +439,3 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!111 &4170863787391941624
-Animation:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8690050572640720708}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Animation: {fileID: 7400000, guid: 2c4af215b69ee334b99d4c28f0a3c04b, type: 2}
-  m_Animations: []
-  m_WrapMode: 0
-  m_PlayAutomatically: 1
-  m_AnimatePhysics: 0
-  m_CullingType: 0

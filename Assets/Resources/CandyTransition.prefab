@@ -95,7 +95,6 @@ GameObject:
   - component: {fileID: 645072823819476150}
   - component: {fileID: 8241003674401381028}
   - component: {fileID: 5410408762745186018}
-  - component: {fileID: 3764941567471999345}
   m_Layer: 0
   m_Name: CandyTransition
   m_TagString: Untagged
@@ -192,18 +191,3 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!111 &3764941567471999345
-Animation:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5444847963326718267}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Animation: {fileID: 7400000, guid: f78cb1191b12eaf40b0e5d1f6dc74e18, type: 2}
-  m_Animations: []
-  m_WrapMode: 0
-  m_PlayAutomatically: 1
-  m_AnimatePhysics: 0
-  m_CullingType: 0
