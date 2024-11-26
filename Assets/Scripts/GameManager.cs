@@ -8,10 +8,12 @@ using System.Linq;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
-    private static GameManager instance;
+    public static GameManager instance;
+    public static GameManager Instance { get; private set; }
 
     [Header("Timer")]
     public float roundDuration = 40f;
+    public float versusDuration = 10f;
     public TMP_Text timerText;
     private float timer;
 
@@ -19,47 +21,62 @@ public class GameManager : MonoBehaviourPunCallbacks
     public Animator transitionAnimator;
     public float transitionDuration = 1.5f;
 
-    private bool isTransitioning = false;
-    private string eliminationMessage = "";
+    private bool isTransitioning;
+    private string eliminationMessage;
 
     void Awake()
     {
-        if (instance == null)
+        // Asegurarse de que solo haya una instancia
+        if (Instance != null && Instance != this)
         {
-            instance = this;
-            DontDestroyOnLoad(gameObject);
-
-            PhotonView photonView = GetComponent<PhotonView>();
-            if (photonView == null)
-            {
-                Debug.LogWarning("PhotonView no encontrado en el GameManager. Añade un PhotonView al GameManager.");
-                Destroy(gameObject);
-                return;
-            }
-        }
-        else if (instance != this)
-        {
-            Destroy(gameObject); // Destruye duplicados
+            Destroy(gameObject); // Destruir la instancia duplicada
             return;
         }
+
+        Instance = this; // Asignamos la instancia
+        DontDestroyOnLoad(gameObject); // Aseguramos que no se destruya al cambiar de escena
+
+        SceneManager.sceneLoaded += OnSceneLoaded; // Asegúrate de registrar el evento
     }
 
-    void Start()
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        timer = roundDuration;
+        string sceneName = scene.name;
+
+        // Inicializamos el temporizador correctamente dependiendo de la escena
+        if (sceneName == "Game")
+        {
+            ResetTimer(roundDuration);
+        }
+        else if (sceneName == "Versus")
+        {
+            ResetTimer(versusDuration);
+        }
+
+        isTransitioning = false; // Restablecer transición
     }
 
-    void Update()
+    private void Start()
+    {
+        // Solo se ejecuta en la primera escena (si no hay un GameManager persistente)
+        if (Instance == this)
+        {
+            ResetTimer(roundDuration);
+        }
+    }
+
+    private void Update()
     {
         if (isTransitioning) return;
 
+        UpdateTimer();
+        if (timer <= 0) HandleSceneTransition();
+    }
+
+    private void UpdateTimer()
+    {
         timer -= Time.deltaTime;
         timerText.text = Mathf.Max(0, timer).ToString("F0");
-
-        if (timer <= 0)
-        {
-            HandleSceneTransition();
-        }
     }
 
     private void HandleSceneTransition()
@@ -69,117 +86,99 @@ public class GameManager : MonoBehaviourPunCallbacks
         isTransitioning = true;
         string currentScene = SceneManager.GetActiveScene().name;
 
-        if (transitionAnimator == null)
+        if (!IsAnimatorValid()) return;
+
+        if (currentScene == "Game")
         {
-            Debug.LogError("transitionAnimator no está asignado.");
+            photonView.RPC(nameof(StartSceneWithTransitionRPC), RpcTarget.All, "Versus");
+        }
+        else if (currentScene == "Versus")
+        {
+            if (PhotonNetwork.IsMasterClient) EliminatePlayerWithLowestPoints();
+            photonView.RPC(nameof(DisplayEliminationMessageRPC), RpcTarget.AllBuffered);
+            photonView.RPC(nameof(StartSceneWithTransitionRPC), RpcTarget.All, "Game");
+        }
+        else
+        {
+            Debug.LogWarning($"Escena desconocida: {currentScene}");
             isTransitioning = false;
-            return;
         }
-
-        switch (currentScene)
-        {
-            case "Game":
-                if (PhotonNetwork.IsMasterClient)
-                {
-                    EliminatePlayerWithLowestPoints();
-                }
-
-                if (PhotonNetwork.IsConnected && photonView != null)
-                {
-                    photonView.RPC("StartSceneWithTransitionRPC", RpcTarget.All, "Versus");
-                }
-                else
-                {
-                    Debug.LogError("PhotonNetwork no está conectado o photonView es null.");
-                    isTransitioning = false;
-                }
-                break;
-
-            case "Versus":
-                if (PhotonNetwork.IsConnected && photonView != null)
-                {
-                    photonView.RPC("DisplayEliminationMessageRPC", RpcTarget.AllBuffered);
-                    photonView.RPC("StartSceneWithTransitionRPC", RpcTarget.All, "Game");
-                }
-                else
-                {
-                    Debug.LogError("PhotonNetwork no está conectado o photonView es null.");
-                    isTransitioning = false;
-                }
-                break;
-
-            default:
-                Debug.LogWarning("Escena desconocida: " + currentScene);
-                isTransitioning = false;
-                break;
-        }
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        if (PhotonNetwork.IsMasterClient)
-        {
-            photonView.RPC("ResetTimerRPC", RpcTarget.AllBuffered);
-        }
-
-        isTransitioning = false;
     }
 
     [PunRPC]
     private void ResetTimerRPC()
     {
-        timer = SceneManager.GetActiveScene().name == "Game" ? roundDuration : 10f;
+        string sceneName = SceneManager.GetActiveScene().name;
+        ResetTimer(sceneName == "Game" ? roundDuration : 10f);
+    }
+
+    private void ResetTimer(float duration)
+    {
+        timer = duration;
+        Debug.Log($"Timer reiniciado a {timer} segundos.");
     }
 
     public void ChangeToLobby()
     {
         StopAllCoroutines();
         PhotonNetwork.LeaveRoom();
-        StartCoroutine(TransitionToLobby());
+        StartCoroutine(TransitionToLobby("Lobby"));
     }
 
-    private IEnumerator TransitionToLobby()
+    private IEnumerator TransitionToLobby(string sceneName)
     {
-        if (transitionAnimator != null)
+        yield return PlayTransitionAnimation();
+        SceneManager.LoadScene(sceneName);
+        CleanupSingleton();
+    }
+
+    private IEnumerator PlayTransitionAnimation()
+    {
+        if (IsAnimatorValid())
         {
             transitionAnimator.SetTrigger("SceneEnter");
             yield return new WaitForSeconds(transitionDuration);
         }
-        else
+    }
+
+    private bool IsAnimatorValid()
+    {
+        if (transitionAnimator == null)
         {
             Debug.LogError("transitionAnimator no está asignado.");
+            return false;
         }
+        return true;
+    }
 
-        SceneManager.LoadScene("Lobby");
-
-        if (instance != null && instance.gameObject != null)
+    private void CleanupSingleton()
+    {
+        if (Instance != null && Instance != this) 
         {
-            Destroy(gameObject);
-            instance = null;
+            Destroy(gameObject); // Destruir solo si es una instancia diferente
         }
+        Instance = null;
     }
 
     [PunRPC]
     public void StartSceneWithTransitionRPC(string sceneName)
     {
-        if (transitionAnimator != null)
-        {
-            transitionAnimator.SetTrigger("SceneEnter");
-            StartCoroutine(LoadSceneWithDelay(sceneName));
-        }
-        else
-        {
-            Debug.LogError("transitionAnimator no está asignado.");
-        }
+        Debug.Log($"Transición a la escena {sceneName} iniciada.");
+        if (!IsAnimatorValid()) return;
+
+        // Cargar la escena de forma controlada
+        StartCoroutine(LoadSceneWithDelay(sceneName));
     }
 
     private IEnumerator LoadSceneWithDelay(string sceneName)
     {
-        yield return new WaitForSeconds(transitionDuration);
+        yield return PlayTransitionAnimation();
 
+        // Cargar la escena usando Photon sin perder el estado
         if (PhotonNetwork.IsConnected)
         {
-            PhotonNetwork.LoadLevel(sceneName);
+            // Llama a un RPC para realizar cambios en la escena sin recargarla
+            photonView.RPC(nameof(TransitionSceneStateRPC), RpcTarget.All, sceneName);
         }
         else
         {
@@ -189,29 +188,42 @@ public class GameManager : MonoBehaviourPunCallbacks
         transitionAnimator.SetTrigger("SceneExit");
     }
 
+    [PunRPC]
+    private void TransitionSceneStateRPC(string sceneName)
+    {
+        // Realiza lo que necesites para "Versus" o "Game"
+        if (sceneName == "Versus")
+        {
+            Debug.Log("Entrando a la escena Versus...");
+        }
+        else if (sceneName == "Game")
+        {
+            Debug.Log("Entrando a la escena Game...");
+        }
+    }
+
     public void EliminatePlayerWithLowestPoints()
     {
-        Player playerToEliminate = null;
-        int lowestPoints = int.MaxValue;
-
-        foreach (Player player in PhotonNetwork.PlayerList)
-        {
-            if (player.CustomProperties != null && player.CustomProperties.ContainsKey("Candies"))
-            {
-                int playerPoints = (int)player.CustomProperties["Candies"];
-
-                if (playerPoints < lowestPoints)
-                {
-                    lowestPoints = playerPoints;
-                    playerToEliminate = player;
-                }
-            }
-        }
+        Player playerToEliminate = PhotonNetwork.PlayerList
+            .Where(p => p.CustomProperties.ContainsKey("Candies"))
+            .OrderBy(p => (int)p.CustomProperties["Candies"])
+            .FirstOrDefault();
 
         if (playerToEliminate != null)
         {
-            eliminationMessage = $"{playerToEliminate.NickName} ha sido eliminado con {lowestPoints} puntos.";
-            photonView.RPC("HandlePlayerEliminationRPC", RpcTarget.AllBuffered, playerToEliminate.UserId);
+            int lowestPoints = (int)playerToEliminate.CustomProperties["Candies"];
+
+            if (Random.value <= 0.5f)
+            {
+                eliminationMessage = $"{playerToEliminate.NickName} ha sido eliminado con {lowestPoints} puntos.";
+                photonView.RPC(nameof(HandlePlayerEliminationRPC), RpcTarget.AllBuffered, playerToEliminate.UserId);
+            }
+            else
+            {
+                eliminationMessage = $"{playerToEliminate.NickName} ha sobrevivido con {lowestPoints} puntos.";
+            }
+
+            photonView.RPC(nameof(DisplayEliminationMessageRPC), RpcTarget.AllBuffered);
         }
         else
         {
@@ -223,22 +235,20 @@ public class GameManager : MonoBehaviourPunCallbacks
     private void HandlePlayerEliminationRPC(string playerId)
     {
         Player playerToEliminate = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
-        if (playerToEliminate != null)
+        if (playerToEliminate == null) return;
+
+        if (playerToEliminate.TagObject is PhotonView playerView &&
+            playerView.GetComponent<PlayerController>() is PlayerController playerController)
         {
-            if (playerToEliminate.TagObject is PhotonView playerView)
-            {
-                PlayerController playerMovement = playerView.GetComponent<PlayerController>();
-                playerMovement?.DisableMovement();
-            }
-
-            var customProperties = new ExitGames.Client.Photon.Hashtable
-            {
-                { "IsEliminated", true }
-            };
-            playerToEliminate.SetCustomProperties(customProperties);
-
-            Debug.Log($"{playerToEliminate.NickName} ha sido eliminado.");
+            playerController.DisableMovement();
         }
+
+        playerToEliminate.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
+        {
+            { "IsEliminated", true }
+        });
+
+        Debug.Log($"{playerToEliminate.NickName} ha sido eliminado.");
     }
 
     [PunRPC]
@@ -248,5 +258,10 @@ public class GameManager : MonoBehaviourPunCallbacks
         {
             Debug.Log(eliminationMessage);
         }
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 }
