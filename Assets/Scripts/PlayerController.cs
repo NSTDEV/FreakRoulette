@@ -210,7 +210,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     [Header("UI")]
     public TMP_Text candyText, playerName;
     public Animator animatorController;
-    private int currentCandies;
+    public int currentCandies;
 
     [Header("Avatar")]
     public SpriteRenderer playerAvatarImage;
@@ -218,7 +218,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private PhotonView view;
 
-    private void Awake() => instance = this;
+   // private void Awake() => instance = this;
 
     private void Start()
     {
@@ -337,20 +337,20 @@ public class PlayerController : MonoBehaviourPunCallbacks
     }
 
     [PunRPC]
-    public void RPC_IncreaseCandies()
-    {
-        currentCandies++;
+public void RPC_IncreaseCandies()
+{
+    currentCandies++;
 
-        // Enviar actualización a todos los jugadores
-        photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
-
-        // Actualizar propiedades personalizadas
-        ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
+    // Sincronizar las propiedades personalizadas
+    ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
     {
         { "Candies", currentCandies }
     };
-        PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
-    }
+    PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
+
+    // Enviar actualización a todos los jugadores
+    photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
+}
 
     [PunRPC]
     private void RPC_SyncCandies(int candies)

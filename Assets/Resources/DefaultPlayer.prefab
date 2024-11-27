@@ -336,6 +336,7 @@ MonoBehaviour:
   candyText: {fileID: 5160945775300235321}
   playerName: {fileID: 3880428062645300969}
   animatorController: {fileID: 6518192511358306457}
+  currentCandies: 0
   playerAvatarImage: {fileID: 1183573414354059085}
   avatars:
   - {fileID: 21300000, guid: 4332fb9d4769f5443858943f9d3e3fae, type: 3}
