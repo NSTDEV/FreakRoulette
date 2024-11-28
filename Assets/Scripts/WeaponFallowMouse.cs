@@ -5,7 +5,7 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
 {
     public Transform player; // Referencia al jugador
     public float orbitRadius = 1.5f; // Radio del círculo
-    private PhotonView photonView;
+    private new PhotonView photonView;
 
     void Start()
     {

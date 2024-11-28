@@ -15,7 +15,6 @@ public class SpawnPlayers : MonoBehaviourPunCallbacks
         // Verificar si estamos conectados a Photon y si es el jugador local
         if (PhotonNetwork.IsConnectedAndReady && PhotonNetwork.LocalPlayer.IsLocal)
         {
-            // Verificar si el jugador ya está instanciado en la escena
             if (GameObject.FindWithTag("Player") == null)
             {
                 SpawnPlayer();
@@ -35,25 +34,8 @@ public class SpawnPlayers : MonoBehaviourPunCallbacks
                 playerPrefab.transform.position.z
             );
 
-            // Instanciar al jugador usando PhotonNetwork.Instantiate
             GameObject spawnedPlayer = PhotonNetwork.Instantiate(playerPrefab.name, randomPosition, Quaternion.identity);
             DontDestroyOnLoad(spawnedPlayer); // Evitar que el jugador se destruya al cambiar de escena
-
-            // Configurar el avatar del jugador si existe
-            if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("playerAvatar", out object avatarIndexObj))
-            {
-                int avatarIndex = (int)avatarIndexObj;
-                PlayerController playerController = spawnedPlayer.GetComponent<PlayerController>();
-
-                if (playerController != null)
-                {
-                    playerController.photonView.RPC(nameof(PlayerController.RPC_UpdateAvatar), RpcTarget.AllBuffered, avatarIndex);
-                }
-            }
-            else
-            {
-                Debug.LogWarning("No se encontró la propiedad 'playerAvatar' en el jugador local.");
-            }
         }
     }
 

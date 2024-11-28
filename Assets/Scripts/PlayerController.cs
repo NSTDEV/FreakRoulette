@@ -24,8 +24,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private PhotonView view;
 
-    private void Awake() => instance = this;
-
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -84,21 +82,20 @@ public class PlayerController : MonoBehaviourPunCallbacks
             : 0;
     }
 
+    [PunRPC]
+    public void RPC_UpdateAvatar(int avatarIndex)
+    {
+        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
+        {
+            playerAvatarImage.sprite = avatars[avatarIndex];
+        }
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Candy"))
         {
-            PhotonView candyPhotonView = other.GetComponent<PhotonView>();
-            if (candyPhotonView == null)
-            {
-                Debug.LogError("El objeto 'Candy' no tiene un PhotonView asignado.");
-                return;
-            }
-
-            if (candyPhotonView.IsMine || PhotonNetwork.IsMasterClient)
-            {
-                CollectCandy(other.gameObject);
-            }
+            CollectCandy(other.gameObject);
         }
     }
 
@@ -122,7 +119,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         PhotonView candyPhotonView = PhotonView.Find(viewID);
 
-        if (candyPhotonView != null && candyPhotonView.gameObject != null)
+        if (candyPhotonView.gameObject != null)
         {
             Destroy(candyPhotonView.gameObject); // Eliminar el objeto de manera segura
         }
@@ -133,23 +130,12 @@ public class PlayerController : MonoBehaviourPunCallbacks
     }
 
     [PunRPC]
-    public void RPC_UpdateAvatar(int avatarIndex)
-    {
-        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
-        {
-            playerAvatarImage.sprite = avatars[avatarIndex];
-        }
-    }
-
-    [PunRPC]
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
 
-        // Enviar actualización a todos los jugadores
         photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
 
-        // Actualizar propiedades personalizadas
         ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
     {
         { "Candies", currentCandies }
@@ -178,7 +164,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
         set => animatorController.SetBool("Failed", value);
     }
 
-    // Métodos para habilitar y deshabilitar el movimiento
     public void DisableMovement()
     {
         canMove = false; // Desactiva el movimiento
