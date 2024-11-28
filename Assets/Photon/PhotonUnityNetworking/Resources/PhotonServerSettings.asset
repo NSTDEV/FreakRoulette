@@ -58,7 +58,27 @@ MonoBehaviour:
   - DisplayEliminationMessageRPC
   - HandlePlayerEliminationRPC
   - ResetTimerRPC
-  - DisplayEliminationMessage
+  - HandleEliminationResult
+  - TransitionToGame
+  - TransitionToVersus
+  - TransitionSceneStateRPC
+  - LoadSceneWithDelay
+  - CollectCandy
+  - DisplayScore
+  - NotifyTimerEnd
+  - SetAvatar
+  - SyncTimer
+  - SyncEndOfRoundRPC
+  - RPC_UpdateWeaponRotation
+  - ChangeGunDirection
+  - GetMouseWorldPosition
+  - ChangeGunRotation
+  - UpdateWeaponRotation
+  - RPC_StopGeneration
+  - RPC_RequestCandyDestruction
+  - RPC_UpdateCandies
+  - UpdateCandies
+  - DisablePlayerMovementRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

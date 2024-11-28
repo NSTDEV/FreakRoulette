@@ -60,7 +60,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     private IEnumerator StartGameWithTransition()
     {
-        transitionAnimator.SetTrigger("SceneEnter");
+        transitionAnimator.SetBool("isSceneEnter", true);
         yield return new WaitForSeconds(transitionDuration);
         PhotonNetwork.LoadLevel("Game");
     }
