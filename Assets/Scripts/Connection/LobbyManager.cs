@@ -35,6 +35,10 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     }
 
     private void Start() => PhotonNetwork.JoinLobby();
+     public void SetRoomName(string name)
+    {
+        roomName.text = name;  // Asigna el nombre al texto en la UI
+    }
 
     private void Update() => playButton.SetActive(PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom?.PlayerCount > 0);
 
@@ -79,23 +83,50 @@ public class LobbyManager : MonoBehaviourPunCallbacks
         lobbyPanel.SetActive(true);
     }
 
-    public override void OnRoomListUpdate(List<RoomInfo> roomList)
+public override void OnRoomListUpdate(List<RoomInfo> roomList)
+{
+    if (roomList == null || roomList.Count == 0) return;
+
+    // Eliminar salas que han sido eliminadas de la lista
+    for (int i = roomItems.Count - 1; i >= 0; i--)
     {
-        if (Time.time < nextUpdateTime) return;
-
-        RefreshList(roomItems, roomListParent);
-
+        bool roomStillExists = false;
         foreach (RoomInfo room in roomList)
         {
-            if (!room.RemovedFromList)
+            if (roomItems[i].roomName.text == room.Name && !room.RemovedFromList)  // Accede directamente al texto
             {
-                RoomItem newRoom = Instantiate(roomItemPrefab, roomListParent);
-                newRoom.SetRoomName(room.Name);
-                roomItems.Add(newRoom);
+                roomStillExists = true;
+                break;
             }
         }
-        nextUpdateTime = Time.time + updateInterval;
+        if (!roomStillExists)
+        {
+            Destroy(roomItems[i].gameObject);  // Destruir el objeto de la sala eliminada
+            roomItems.RemoveAt(i);  // Eliminar de la lista de roomItems
+        }
     }
+
+    // Ahora agregamos o actualizamos las salas
+    foreach (RoomInfo room in roomList)
+    {
+        if (!room.RemovedFromList)
+        {
+            // Verificamos si la sala ya existe en la lista
+            bool roomExists = roomItems.Exists(item => item.roomName.text == room.Name);  // Accede al texto directamente
+
+            if (!roomExists)
+            {
+                // Crear un nuevo item para la nueva sala
+                RoomItem newRoom = Instantiate(roomItemPrefab, roomListParent);
+                newRoom.SetRoomName(room.Name);  // Asignar el nombre a la UI
+                roomItems.Add(newRoom);  // Añadir a la lista de objetos instanciados
+            }
+        }
+    }
+
+    nextUpdateTime = Time.time + updateInterval;  // Actualizar el tiempo para la próxima actualización
+}
+
 
     public override void OnPlayerEnteredRoom(Player newPlayer) => UpdatePlayerList();
 
