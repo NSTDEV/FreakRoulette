@@ -15,9 +15,11 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
 
     public void EliminatePlayerWithLowestPoints()
     {
-        // Buscar al jugador con menos puntos
+        // Buscar al jugador con menos puntos, excluyendo los jugadores eliminados
         var playerToEliminate = PhotonNetwork.PlayerList
-            .Where(p => p.CustomProperties.ContainsKey("Candies"))
+            .Where(p => p.CustomProperties.ContainsKey("Candies") &&
+                        !p.CustomProperties.ContainsKey("IsEliminated") ||
+                        (bool)p.CustomProperties["IsEliminated"] == false) // Filtrar jugadores eliminados
             .OrderBy(p => (int)p.CustomProperties["Candies"])
             .FirstOrDefault();
 
@@ -42,7 +44,6 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         Debug.Log("Buscando jugador con menos puntos...");
         Debug.Log($"Jugador eliminado: {playerToEliminate.NickName} con {lowestPoints} puntos.");
 
-
         eliminateExecuted = true;
     }
 
@@ -52,9 +53,10 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         var player = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
         if (player == null) return;
 
+        // Establecer la propiedad de eliminación
         player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", true } });
 
-        // Aquí, actualizamos el estado del movimiento en todos los clientes
+        // Deshabilitar movimiento en todos los jugadores
         photonView.RPC(nameof(DisablePlayerMovementRPC), RpcTarget.AllBuffered, player.UserId);
 
         Debug.Log($"{player.NickName} ha sido eliminado.");
