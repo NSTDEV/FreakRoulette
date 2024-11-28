@@ -28,29 +28,26 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
 
     void Update()
     {
-        if (!photonView.IsMine || player == null) return; // Evitar errores si player es nulo
+        if (!photonView.IsMine || player == null) return;
 
         Vector3 mousePosition = GetMouseWorldPosition();
-
-        // Calcular dirección desde el jugador hacia el mouse
         Vector3 direction = (mousePosition - player.position).normalized;
 
         // Mantener el arma exactamente en el perímetro del círculo
         Vector3 orbitPosition = player.position + direction * orbitRadius;
         transform.position = orbitPosition;
 
-        // Rotar el arma para que apunte hacia afuera del círculo
-        float angle = Mathf.Atan2(-direction.y, -direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, 0f, angle);
-
-        // Invertir escala horizontal si el mouse está a la izquierda
-        Vector3 localScale = transform.localScale;
-        localScale.x = direction.x < 0 ? Mathf.Abs(localScale.x) : -Mathf.Abs(localScale.x);
-        transform.localScale = localScale;
-
         ChangeGunDirection(direction);
+        photonView.RPC(nameof(ChangeGunDirection), RpcTarget.All, direction);
+        
+        if (photonView.IsMine)
+        {
+            photonView.RPC(nameof(GetMouseWorldPosition), RpcTarget.All);
+
+        }
     }
 
+    [PunRPC]
     private void ChangeGunDirection(Vector3 direction)
     {
         // Calcular ángulo para la rotación
@@ -69,6 +66,7 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
         }
     }
 
+    [PunRPC]
     private Vector3 GetMouseWorldPosition()
     {
         if (Camera.main == null)

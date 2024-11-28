@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections;
 
 public class PlayerController : MonoBehaviourPunCallbacks
 {
@@ -24,6 +25,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private PhotonView view;
 
+    private void Awake() => instance = this;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -33,15 +36,24 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private void Update()
     {
-        if (view.IsMine && canMove) // Solo procesar inputs si el movimiento está habilitado
+        if (view.IsMine)
         {
-            ProcessInputs();
+            if (PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("IsEliminated") &&
+                (bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
+            {
+                DisableMovement();
+            }
+
+            if (canMove)
+            {
+                ProcessInputs();
+            }
         }
     }
 
     private void FixedUpdate()
     {
-        if (canMove) // Solo mover al jugador si puede moverse
+        if (canMove)
         {
             rb.velocity = mInput * moveSpeed;
         }
@@ -82,20 +94,27 @@ public class PlayerController : MonoBehaviourPunCallbacks
             : 0;
     }
 
-    [PunRPC]
-    public void RPC_UpdateAvatar(int avatarIndex)
-    {
-        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
-        {
-            playerAvatarImage.sprite = avatars[avatarIndex];
-        }
-    }
-
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("IsEliminated") &&
+            (bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
+        {
+            return;
+        }
+
         if (other.CompareTag("Candy"))
         {
-            CollectCandy(other.gameObject);
+            PhotonView candyPhotonView = other.GetComponent<PhotonView>();
+            if (candyPhotonView == null)
+            {
+                Debug.LogError("El objeto 'Candy' no tiene un PhotonView asignado.");
+                return;
+            }
+
+            if (candyPhotonView.IsMine || PhotonNetwork.IsMasterClient)
+            {
+                CollectCandy(other.gameObject);
+            }
         }
     }
 
@@ -119,7 +138,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         PhotonView candyPhotonView = PhotonView.Find(viewID);
 
-        if (candyPhotonView.gameObject != null)
+        if (candyPhotonView != null && candyPhotonView.gameObject != null)
         {
             Destroy(candyPhotonView.gameObject); // Eliminar el objeto de manera segura
         }
@@ -130,12 +149,23 @@ public class PlayerController : MonoBehaviourPunCallbacks
     }
 
     [PunRPC]
+    public void RPC_UpdateAvatar(int avatarIndex)
+    {
+        if (avatarIndex >= 0 && avatarIndex < avatars.Length)
+        {
+            playerAvatarImage.sprite = avatars[avatarIndex];
+        }
+    }
+
+    [PunRPC]
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
 
+        // Enviar actualización a todos los jugadores
         photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
 
+        // Actualizar propiedades personalizadas
         ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
     {
         { "Candies", currentCandies }
@@ -158,19 +188,27 @@ public class PlayerController : MonoBehaviourPunCallbacks
         }
     }
 
-    public bool Failed
-    {
-        get => animatorController.GetBool("Failed");
-        set => animatorController.SetBool("Failed", value);
-    }
-
     public void DisableMovement()
     {
         canMove = false; // Desactiva el movimiento
+        animatorController.SetBool("Failed", true);
+
+        // Gradualmente parar el movimiento (opcional)
+        StartCoroutine(GradualStopMovement());
     }
 
-    public void EnableMovement()
+    private IEnumerator GradualStopMovement()
     {
-        canMove = true; // Activa el movimiento
+        float stopTime = 1f; // Tiempo para detenerse
+        float elapsedTime = 0f;
+
+        while (elapsedTime < stopTime)
+        {
+            rb.velocity = Vector2.Lerp(rb.velocity, Vector2.zero, elapsedTime / stopTime);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        rb.velocity = Vector2.zero; // Asegurarse de que la velocidad se ponga a cero
     }
 }
