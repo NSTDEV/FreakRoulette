@@ -122,4 +122,39 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
         list.Clear();
     }
+    // Método Bubble Sort que ordena los jugadores por nombre alfabéticamente
+private void BubbleSort(List<PlayerItemInfo> players)
+{
+    int n = players.Count;
+    bool swapped;
+    do
+    {
+        swapped = false;
+        for (int i = 0; i < n - 1; i++)
+        {
+            if (string.Compare(players[i].PlayerName, players[i + 1].PlayerName) > 0) // Comparar alfabéticamente
+            {
+                // Intercambiar los elementos si no están en el orden correcto
+                PlayerItemInfo temp = players[i];
+                players[i] = players[i + 1];
+                players[i + 1] = temp;
+                swapped = true;
+            }
+        }
+        n--; // Reducir la longitud para evitar comparar elementos ya ordenados
+    } while (swapped);
+}
+
+// Clase interna para almacenar el jugador y su nombre
+private class PlayerItemInfo
+{
+    public Player Player { get; private set; }
+    public string PlayerName { get; private set; }
+
+    public PlayerItemInfo(Player player, string playerName)
+    {
+        Player = player;
+        PlayerName = playerName;
+    }
+}
 }
