@@ -25,7 +25,7 @@ public class MusicaLoading : MonoBehaviour
             audioSource.Play();
 
             // Configurar el audio para que se repita en bucle si es necesario
-            audioSource.loop = true;
+            //audioSource.loop = true; 
         }
         else
         {
