@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7200477443214656874}
   - component: {fileID: 2284351401038122358}
   - component: {fileID: 5385074463087843158}
+  - component: {fileID: 2893595908036562056}
   m_Layer: 0
   m_Name: CandyPrefab
   m_TagString: Candy
@@ -102,6 +103,19 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
+--- !u!114 &2893595908036562056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 336798983461181352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77aa7eae0b982f24685639e73b5a904a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  candyAnimator: {fileID: 8295891065378100363}
 --- !u!1 &7676081384033494121
 GameObject:
   m_ObjectHideFlags: 0
