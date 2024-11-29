@@ -22,6 +22,12 @@ public class GameManager : MonoBehaviourPunCallbacks
     private bool isTransitioning = false;
     private string eliminationMessage = "";
 
+     // Referencia al componente AudioSource
+    private AudioSource audioSource;
+
+    // AudioClip para el sonido a reproducir
+    public AudioClip clip;
+
     void Awake()
     {
         if (instance == null)
@@ -47,6 +53,15 @@ public class GameManager : MonoBehaviourPunCallbacks
     void Start()
     {
         timer = roundDuration;
+
+         // Obtener el componente AudioSource en el objeto
+        audioSource = GetComponent<AudioSource>();
+
+        // Asegurarse de que el AudioSource tenga un clip asignado
+        if (clip != null)
+        {
+            audioSource.clip = clip; // Asignar el AudioClip
+        }
     }
 
     void Update()
@@ -143,6 +158,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         if (transitionAnimator != null)
         {
             transitionAnimator.SetTrigger("SceneEnter");
+            audioSource.Play(); // Reproduce el sonido
             yield return new WaitForSeconds(transitionDuration);
         }
         else
