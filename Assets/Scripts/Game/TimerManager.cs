@@ -31,18 +31,15 @@ public class TimerManager : MonoBehaviour
     public void SetTimer(float collectDuration)
     {
         timer = collectDuration;
-        Debug.Log($"Timer establecido a: {timer}");
     }
 
     public float SetTimerVersus()
     {
-        Debug.Log($"Timer establecido a: {timer}");
         return timer = versusDuration;
     }
 
     public float SetTimerCollecting()
     {
-        Debug.Log($"Timer establecido a: {timer}");
         return timer = collectDuration;
     }
 

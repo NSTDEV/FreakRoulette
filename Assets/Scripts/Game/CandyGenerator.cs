@@ -18,8 +18,8 @@ public class CandyGenerator : MonoBehaviour
 
     public void ResetGenerator()
     {
-        StopAllCoroutines();
         DestroyAllCandies();
+        StopAllCoroutines();
         StartCoroutine(RespawnCandy());
     }
 
@@ -70,7 +70,8 @@ public class CandyGenerator : MonoBehaviour
     public void StopGeneration()
     {
         isGenerating = false;
-        PhotonView.Get(this).RPC("RPC_StopGeneration", RpcTarget.All);
+        PhotonView.Get(this).RPC("RPC_StopGeneration", RpcTarget.AllBuffered);
+        DestroyAllCandies();
     }
 
     [PunRPC]

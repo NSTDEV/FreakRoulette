@@ -11,6 +11,13 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
     {
         photonView = GetComponent<PhotonView>();
 
+        // Verificar que photonView no sea null
+        if (photonView == null)
+        {
+            Debug.LogError("El componente PhotonView no está asignado en este objeto.");
+            return;
+        }
+
         // Si player no está asignado manualmente, intenta buscarlo automáticamente
         if (player == null)
         {
@@ -28,22 +35,29 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
 
     void Update()
     {
-        // Solo permitir que el jugador propietario mueva su propia arma
-        if (!photonView.IsMine || player == null) return;
+        if (player == null)
+        {
+            Debug.LogError("Referencia a 'player' es nula.");
+            return;
+        }
 
-        // Obtener la posición del mouse en el mundo
+        // Verificar si photonView es mío antes de proceder
+        if (!photonView.IsMine) return;
+
         Vector3 mousePosition = GetMouseWorldPosition();
-        Vector3 direction = (mousePosition - player.position).normalized;
+        if (mousePosition == Vector3.zero) return;
 
-        // Mantener el arma exactamente en el perímetro del círculo
+        Vector3 direction = (mousePosition - player.position).normalized;
         Vector3 orbitPosition = player.position + direction * orbitRadius;
         transform.position = orbitPosition;
 
-        // Cambiar la dirección del arma
         ChangeGunDirection(direction);
 
-        // Sincronizar la dirección del arma con otros jugadores
-        photonView.RPC(nameof(UpdateWeaponRotation), RpcTarget.OthersBuffered, direction);
+        // Solo enviar RPC si photonView no es null
+        if (photonView != null)
+        {
+            photonView.RPC(nameof(UpdateWeaponRotation), RpcTarget.AllBuffered, direction);
+        }
     }
 
     [PunRPC]

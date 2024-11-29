@@ -1,7 +1,8 @@
 using UnityEngine;
 using Photon.Pun;
-using System.Collections;
+using System.Linq;
 using UnityEngine.SceneManagement;
+using System.Collections;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
@@ -100,12 +101,10 @@ public class GameManager : MonoBehaviourPunCallbacks
 
             if (state && candyGenerator.TryGetComponent(out CandyGenerator generator))
             {
-                // Reiniciar la generación si se activa
-                generator.ResetGenerator(); // Reinicia la generación de caramelos cuando se activa
+                generator.ResetGenerator();
             }
             else if (!state && candyGenerator.TryGetComponent(out CandyGenerator stopGenerator))
             {
-                // Detener la generación si se desactiva
                 stopGenerator.StopGeneration(); // Detiene la generación de caramelos
             }
 
@@ -138,4 +137,10 @@ public class GameManager : MonoBehaviourPunCallbacks
         SceneManager.LoadScene("Lobby");
     }
 
+    [PunRPC]
+    public void LoadWinnerScene()
+    {
+        // Carga la escena de ganador
+        SceneManager.LoadScene("Winner");
+    }
 }

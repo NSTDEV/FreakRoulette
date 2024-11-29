@@ -1,18 +1,34 @@
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 
 public class InhabilitatePlayer : MonoBehaviourPunCallbacks
 {
+    public Animator shadowAnimator;
     private string eliminationMessage;
-    public bool eliminateExecuted = false;
+    private bool eliminateExecuted = false;
 
     public void EliminatePlayerWithLowestPoints()
     {
-        var playerToEliminate = PhotonNetwork.PlayerList
-            .Where(p => (bool)p.CustomProperties["IsEliminated"] == false) // Filtrar jugadores eliminados
-            .OrderBy(p => (int)p.CustomProperties["Candies"]).FirstOrDefault();
+        if (eliminateExecuted) return;
+        
+        var playersToConsider = PhotonNetwork.PlayerList
+            .Where(p => (bool)p.CustomProperties["IsEliminated"] == false) // Filtra jugadores no eliminados
+            .ToList();
+
+        // Verificar si hay jugadores para eliminar
+        if (playersToConsider.Count == 0)
+        {
+            Debug.Log("No hay jugadores restantes para eliminar.");
+            return;
+        }
+
+        // Ordena por puntos (Candies) y selecciona el primero
+        var playerToEliminate = playersToConsider
+            .OrderBy(p => (int)p.CustomProperties["Candies"])
+            .FirstOrDefault();
 
         if (playerToEliminate == null)
         {
@@ -21,17 +37,26 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         }
 
         int lowestPoints = (int)playerToEliminate.CustomProperties["Candies"];
-        bool isEliminated = Random.value <= 0.5f;
+        bool isEliminated = Random.value <= 0.5f; // 50% de probabilidad de eliminación
+
         eliminationMessage = isEliminated
             ? $"{playerToEliminate.NickName} ha sido eliminado con {lowestPoints} puntos."
             : $"{playerToEliminate.NickName} ha sobrevivido con {lowestPoints} puntos.";
 
         photonView.RPC(nameof(DisplayEliminationMessageRPC), RpcTarget.AllBuffered);
 
+        // Si el jugador es eliminado, procesamos la eliminación
         if (isEliminated)
         {
             photonView.RPC(nameof(HandlePlayerEliminationRPC), RpcTarget.AllBuffered, playerToEliminate.UserId);
         }
+        else
+        {
+            photonView.RPC(nameof(StartFailedAnimationRPC), RpcTarget.AllBuffered);
+        }
+
+        // Verificamos si solo queda un jugador después de la eliminación
+        CheckRemainingPlayers(); // Verifica si solo queda un jugador y manda a la escena de ganador
 
         eliminateExecuted = true;
     }
@@ -42,27 +67,64 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         var player = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
         if (player == null) return;
 
+        // Iniciar animación de eliminación (por ejemplo, "Eating")
+        photonView.RPC(nameof(StartEatingAnimationRPC), RpcTarget.AllBuffered);
+
         // Establecer la propiedad de eliminación
         player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", true } });
 
-        // Deshabilitar movimiento solo si el jugador no está eliminado
-        photonView.RPC(nameof(DisablePlayerMovementRPC), RpcTarget.AllBuffered, player.UserId);
+        // Llamar al RPC para deshabilitar el movimiento
+        photonView.RPC(nameof(DisablePlayerMovementRPC), RpcTarget.AllBuffered, playerId);
+    }
 
-        Debug.Log($"{player.NickName} ha sido eliminado.");
+    [PunRPC]
+    private void StartEatingAnimationRPC()
+    {
+        shadowAnimator.SetTrigger("EatTime");
+        StartCoroutine(WaitForAnimation());
+    }
+
+    [PunRPC]
+    private void StartFailedAnimationRPC()
+    {
+        shadowAnimator.SetTrigger("Failed");
+        StartCoroutine(WaitForAnimation());
+    }
+
+    private IEnumerator WaitForAnimation()
+    {
+        yield return new WaitForSeconds(1.5f);
+        shadowAnimator.SetTrigger("BackToIdle");
     }
 
     [PunRPC]
     public void DisablePlayerMovementRPC(string playerId)
     {
         var player = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
-        if (player == null || player.CustomProperties.ContainsKey("IsEliminated") && (bool)player.CustomProperties["IsEliminated"])
+        if (player == null)
         {
-            return; // Si el jugador está eliminado, no hacer nada
+            Debug.LogError($"No se encontró el jugador con ID: {playerId}");
+            return;
         }
 
-        if (player.TagObject is GameObject playerObj && playerObj.GetComponent<PlayerController>() is PlayerController controller)
+        if (player.TagObject == null)
         {
-            controller.DisableMovement(); // Deshabilitar el movimiento
+            Debug.LogWarning($"El `TagObject` no está configurado para el jugador: {player.NickName}");
+            return;
+        }
+
+        if (player.TagObject is GameObject playerObj)
+        {
+            var controller = playerObj.GetComponent<PlayerController>();
+            if (controller != null)
+            {
+                controller.DisableMovement();
+                Debug.Log($"Movimiento deshabilitado para el jugador: {player.NickName}");
+            }
+            else
+            {
+                Debug.LogError($"El objeto del jugador {player.NickName} no tiene un `PlayerController`.");
+            }
         }
     }
 
@@ -75,4 +137,18 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         }
     }
 
+    // Función que detecta si solo queda un jugador
+    public void CheckRemainingPlayers()
+    {
+        // Contamos los jugadores activos (no eliminados)
+        var activePlayers = PhotonNetwork.PlayerList
+            .Where(p => !(bool)p.CustomProperties["IsEliminated"])
+            .ToArray();
+
+        if (activePlayers.Length == 1)
+        {
+            // Si solo queda un jugador, lo enviamos a la escena de ganador
+            photonView.RPC("LoadWinnerScene", RpcTarget.AllBuffered);
+        }
+    }
 }

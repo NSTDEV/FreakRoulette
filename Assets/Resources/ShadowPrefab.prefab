@@ -345,7 +345,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e1566e7393c1ea546bad0ab01df97936, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  eliminateExecuted: 0
+  shadowAnimator: {fileID: 7521623423021044033}
 --- !u!114 &6005586674754699171
 MonoBehaviour:
   m_ObjectHideFlags: 0

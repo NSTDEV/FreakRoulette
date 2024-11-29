@@ -2,17 +2,14 @@ using TMPro;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
-using System.Collections;
 
 public class PlayerController : MonoBehaviourPunCallbacks
 {
-    public static PlayerController instance;
-
     [Header("Movimiento")]
     public float moveSpeed = 5f;
     private Vector2 mInput;
     private Rigidbody2D rb;
-    private bool canMove = true; // Nueva variable para controlar el movimiento
+    private bool canMove = true; // Variable para controlar el movimiento
 
     [Header("UI")]
     public TMP_Text candyText, playerName;
@@ -25,32 +22,24 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private PhotonView view;
 
-    private void Awake() => instance = this;
-
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         view = GetComponent<PhotonView>();
         InitializePlayer();
 
-
-        // Llamar al RPC para actualizar el texto de caramelos al unirse
         if (view.IsMine)
         {
-            photonView.RPC("RPC_UpdateCandyText", RpcTarget.All, currentCandies);
+            photonView.RPC("RPC_UpdateCandyText", RpcTarget.AllBuffered, currentCandies);
+            PhotonNetwork.LocalPlayer.TagObject = gameObject; // Asignar TagObject aquí
         }
     }
 
     private void Update()
     {
-        if (view.IsMine)
+        if (view.IsMine && canMove)
         {
-            CheckPlayerEliminated();
-
-            if (canMove)
-            {
-                ProcessInputs();
-            }
+            ProcessInputs();
         }
     }
 
@@ -60,14 +49,12 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             rb.velocity = mInput * moveSpeed;
             animatorController.SetBool("Walking", rb.velocity.sqrMagnitude > 0.01f);
-
-            if (rb.velocity.sqrMagnitude <= 0)
-            {
-                animatorController.SetBool("Walking", false);
-            }
         }
-        else rb.velocity = Vector2.zero;
-
+        else
+        {
+            rb.velocity = Vector2.zero;
+            animatorController.SetBool("Walking", false);
+        }
 
         if (mInput.x != 0)
         {
@@ -105,16 +92,13 @@ public class PlayerController : MonoBehaviourPunCallbacks
     private void InitializeCustomProperties(Player player = null)
     {
         player = player ?? PhotonNetwork.LocalPlayer;
-
-        if (!player.CustomProperties.ContainsKey("Candies"))
+        var defaultProps = new ExitGames.Client.Photon.Hashtable
         {
-            player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "Candies", 0 } });
-        }
+            { "Candies", 0 },
+            { "IsEliminated", false }
+        };
 
-        if (!player.CustomProperties.ContainsKey("IsEliminated"))
-        {
-            player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", false } });
-        }
+        player.SetCustomProperties(defaultProps);
     }
 
     private int GetAvatarIndex()
@@ -133,19 +117,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
         }
     }
 
-    private void CheckPlayerEliminated()
-    {
-        if (PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("IsEliminated") &&
-            (bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
-        {
-            DisableMovement();
-        }
-        else
-        {
-            EnableMovement();
-        }
-    }
-
     private void OnTriggerEnter2D(Collider2D other)
     {
         if ((bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
@@ -153,7 +124,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
             return;
         }
 
-        if (other.CompareTag("Candy") && view.IsMine || PhotonNetwork.IsMasterClient)
+        if (other.CompareTag("Candy") && view.IsMine)
         {
             CollectCandy(other.gameObject);
         }
@@ -163,13 +134,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         RPC_IncreaseCandies();
 
-        if (candy != null) // Verifica que el caramelo aún existe
+        if (candy != null)
         {
             PhotonView candyPhotonView = candy.GetComponent<PhotonView>();
-            if (candyPhotonView != null)
-            {
-                candyPhotonView.RPC("TriggerDestruction", RpcTarget.All);
-            }
+            candyPhotonView.RPC("TriggerDestruction", RpcTarget.AllBuffered);
         }
     }
 
@@ -177,34 +145,31 @@ public class PlayerController : MonoBehaviourPunCallbacks
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
-        // Llamar al RPC para actualizar el texto global de los caramelos
-        photonView.RPC("RPC_UpdateCandyText", RpcTarget.All, currentCandies);
+        photonView.RPC("RPC_UpdateCandyText", RpcTarget.AllBuffered, currentCandies);
 
-        // Actualizar propiedades personalizadas
-        ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
+        PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
         {
             { "Candies", currentCandies }
-        };
-        PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
+        });
     }
 
     [PunRPC]
     public void RPC_UpdateCandyText(int updatedCandies)
     {
-        // Este método se llama en todos los jugadores para actualizar su UI
         candyText.text = updatedCandies.ToString();
-    }
-
-    public void DisableMovement()
-    {
-        canMove = false; // Desactiva el movimiento
-        animatorController.SetBool("Failed", true);
     }
 
     public void EnableMovement()
     {
-        canMove = true; // Habilita el movimiento
-        animatorController.SetBool("Failed", false); // Vuelve al estado normal
-        animatorController.SetBool("Walking", rb.velocity.sqrMagnitude > 0.01f); // Inicia la animación de caminar solo si hay movimiento
+        canMove = true;
+        animatorController.SetBool("Failed", false);
+        animatorController.SetBool("Walking", mInput.sqrMagnitude > 0.01f);
+    }
+
+    public void DisableMovement()
+    {
+        canMove = false;
+        animatorController.SetBool("Failed", true);
+        Debug.Log("Movimiento deshabilitado para el jugador.");
     }
 }

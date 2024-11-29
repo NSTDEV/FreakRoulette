@@ -85,6 +85,9 @@ MonoBehaviour:
   - RPC_UpdateCandyText
   - RPC_ResetPlayerCandies
   - RPC_ResetPlayerStats
+  - StartEatingAnimationRPC
+  - StartFailedAnimationRPC
+  - LoadWinnerScene
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

@@ -21,7 +21,16 @@ public class Candy : MonoBehaviourPunCallbacks
     public void TriggerDestruction()
     {
         candyCollider.enabled = false; // Desactiva el collider
-        StartCoroutine(CandyDestruction());
+
+        if (candyAnimator != null)
+        {
+            candyAnimator.SetTrigger("Collected");
+            StartCoroutine(CandyDestruction());
+        }
+        else
+        {
+            StartCoroutine(CandyDestruction());
+        }
     }
 
     private IEnumerator CandyDestruction()
