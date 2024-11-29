@@ -22,11 +22,26 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private PhotonView view;
 
+    // Referencia al componente AudioSource
+    private AudioSource audioSource;
+
+    // AudioClip para el sonido a reproducir
+    public AudioClip clip;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         view = GetComponent<PhotonView>();
         InitializePlayer();
+
+        // Obtener el componente AudioSource en el objeto
+        audioSource = GetComponent<AudioSource>();
+
+        // Asegurarse de que el AudioSource tenga un clip asignado
+        if (clip != null)
+        {
+            audioSource.clip = clip; // Asignar el AudioClip
+        }
 
         if (view.IsMine)
         {
@@ -133,7 +148,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     private void CollectCandy(GameObject candy)
     {
         RPC_IncreaseCandies();
-
+        audioSource.Play(); // Reproduce el sonido
         if (candy != null)
         {
             PhotonView candyPhotonView = candy.GetComponent<PhotonView>();

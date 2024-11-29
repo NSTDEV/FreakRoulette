@@ -27,11 +27,26 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     private readonly List<RoomItem> roomItems = new();
     private readonly List<PlayerItem> playerItems = new();
 
+     // Referencia al componente AudioSource
+    private AudioSource audioSource;
+
+    // AudioClip para el sonido a reproducir
+    public AudioClip clip;
+
     private void Awake()
     {
         string defaultName = PlayerPrefs.GetString("PlayerName", "Player");
         PhotonNetwork.LocalPlayer.NickName = defaultName;
         playerName.text = defaultName;
+
+        // Obtener el componente AudioSource en el objeto
+        audioSource = GetComponent<AudioSource>();
+
+        // Asegurarse de que el AudioSource tenga un clip asignado
+        if (clip != null)
+        {
+            audioSource.clip = clip; // Asignar el AudioClip
+        }
     }
 
     private void Start() => PhotonNetwork.JoinLobby();
@@ -60,6 +75,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     private IEnumerator StartGameWithTransition()
     {
+        audioSource.Play(); // Reproduce el sonido
         transitionAnimator.SetBool("isSceneEnter", true);
         yield return new WaitForSeconds(transitionDuration);
         PhotonNetwork.LoadLevel("Game");
@@ -67,6 +83,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
 
     public override void OnJoinedRoom()
     {
+        audioSource.Play(); // Reproduce el sonido
         lobbyPanel.SetActive(false);
         roomPanel.SetActive(true);
         roomName.text = PhotonNetwork.CurrentRoom.Name;
