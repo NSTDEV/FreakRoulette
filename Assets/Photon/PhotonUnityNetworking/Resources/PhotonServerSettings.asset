@@ -79,6 +79,9 @@ MonoBehaviour:
   - RPC_UpdateCandies
   - UpdateCandies
   - DisablePlayerMovementRPC
+  - SyncStartTime
+  - UpdateTimerText
+  - TriggerDestruction
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

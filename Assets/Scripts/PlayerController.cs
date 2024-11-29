@@ -77,16 +77,13 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             PhotonNetwork.LocalPlayer.NickName = playerName.text;
 
-            // Asigna un avatar para el jugador (si es necesario)
             int avatarIndex = GetAvatarIndex();
             photonView.RPC(nameof(RPC_UpdateAvatar), RpcTarget.AllBuffered, avatarIndex);
 
-            // Inicializa las propiedades del jugador si no están presentes
             InitializeCustomProperties();
         }
         else
         {
-            // Asegúrate de que otros jugadores también tengan las propiedades necesarias
             InitializeCustomProperties(view.Owner);
         }
     }
@@ -150,31 +147,11 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
         if (candy != null) // Verifica que el caramelo aún existe
         {
-            // Obtenemos el script Candy del objeto
-            Candy candyScript = candy.GetComponent<Candy>();
-            if (candyScript != null)
+            PhotonView candyPhotonView = candy.GetComponent<PhotonView>();
+            if (candyPhotonView != null)
             {
-                candyScript.TriggerDestruction();
-                photonView.RPC(nameof(RPC_DestroyCandy), RpcTarget.AllBuffered, candy.GetPhotonView().ViewID);
+                candyPhotonView.RPC("TriggerDestruction", RpcTarget.All);
             }
-        }
-    }
-
-    [PunRPC]
-    private void RPC_DestroyCandy(int viewID)
-    {
-        PhotonView candyPhotonView = PhotonView.Find(viewID);
-
-        if (candyPhotonView != null)
-        {
-            if (candyPhotonView.IsMine || PhotonNetwork.IsMasterClient)
-            {
-                PhotonNetwork.Destroy(candyPhotonView.gameObject); // Destruir el objeto de manera sincronizada
-            }
-        }
-        else
-        {
-            Debug.LogWarning("El caramelo ya fue destruido o no existe.");
         }
     }
 
@@ -182,7 +159,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
-        photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
+        candyText.text = currentCandies.ToString();
 
         // Actualizar propiedades personalizadas
         ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
@@ -190,21 +167,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
             { "Candies", currentCandies }
         };
         PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
-    }
-
-    [PunRPC]
-    private void RPC_SyncCandies(int candies)
-    {
-        currentCandies = candies;
-        candyText.text = currentCandies.ToString();
-    }
-
-    public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
-    {
-        if (targetPlayer != null && targetPlayer == view.Owner && changedProps.TryGetValue("PlayerName", out var newName))
-        {
-            playerName.text = (string)newName;
-        }
     }
 
     public void DisableMovement()

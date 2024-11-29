@@ -1,8 +1,7 @@
 using TMPro;
 using UnityEngine;
-using Photon.Pun;
 
-public class TimerManager : MonoBehaviourPun
+public class TimerManager : MonoBehaviour
 {
     [Header("Timer Settings")]
     public float collectDuration = 40f;
@@ -14,10 +13,7 @@ public class TimerManager : MonoBehaviourPun
 
     void Start()
     {
-        if (PhotonNetwork.IsMasterClient)
-        {
-            timer = collectDuration;
-        }
+        timer = collectDuration;
     }
 
     void Update()
@@ -30,6 +26,12 @@ public class TimerManager : MonoBehaviourPun
             OnTimerEnded.Invoke();
             timer = 0;
         }
+    }
+
+    public void SetTimer(float collectDuration)
+    {
+        timer = collectDuration;
+        Debug.Log($"Timer establecido a: {timer}");
     }
 
     public float SetTimerVersus()

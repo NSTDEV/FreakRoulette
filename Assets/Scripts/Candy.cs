@@ -1,7 +1,8 @@
 using System.Collections;
+using Photon.Pun;
 using UnityEngine;
 
-public class Candy : MonoBehaviour
+public class Candy : MonoBehaviourPunCallbacks
 {
     public Animator candyAnimator;
     private BoxCollider2D candyCollider; // Declaración del collider
@@ -16,6 +17,7 @@ public class Candy : MonoBehaviour
         transform.position = initPosition; // Configura la posición inicial del caramelo
     }
 
+    [PunRPC]
     public void TriggerDestruction()
     {
         candyCollider.enabled = false; // Desactiva el collider
