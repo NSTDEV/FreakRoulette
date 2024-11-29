@@ -8,20 +8,11 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
     private string eliminationMessage;
     public bool eliminateExecuted = false;
 
-    private void Start()
-    {
-        Debug.Log("Shadow ACTIVE");
-    }
-
     public void EliminatePlayerWithLowestPoints()
     {
-        // Buscar al jugador con menos puntos, excluyendo los jugadores eliminados
         var playerToEliminate = PhotonNetwork.PlayerList
-            .Where(p => p.CustomProperties.ContainsKey("Candies") &&
-                        !p.CustomProperties.ContainsKey("IsEliminated") ||
-                        (bool)p.CustomProperties["IsEliminated"] == false) // Filtrar jugadores eliminados
-            .OrderBy(p => (int)p.CustomProperties["Candies"])
-            .FirstOrDefault();
+            .Where(p => (bool)p.CustomProperties["IsEliminated"] == false) // Filtrar jugadores eliminados
+            .OrderBy(p => (int)p.CustomProperties["Candies"]).FirstOrDefault();
 
         if (playerToEliminate == null)
         {
@@ -41,8 +32,6 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         {
             photonView.RPC(nameof(HandlePlayerEliminationRPC), RpcTarget.AllBuffered, playerToEliminate.UserId);
         }
-        Debug.Log("Buscando jugador con menos puntos...");
-        Debug.Log($"Jugador eliminado: {playerToEliminate.NickName} con {lowestPoints} puntos.");
 
         eliminateExecuted = true;
     }
@@ -56,7 +45,7 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         // Establecer la propiedad de eliminación
         player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", true } });
 
-        // Deshabilitar movimiento en todos los jugadores
+        // Deshabilitar movimiento solo si el jugador no está eliminado
         photonView.RPC(nameof(DisablePlayerMovementRPC), RpcTarget.AllBuffered, player.UserId);
 
         Debug.Log($"{player.NickName} ha sido eliminado.");
@@ -66,7 +55,10 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
     public void DisablePlayerMovementRPC(string playerId)
     {
         var player = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
-        if (player == null) return;
+        if (player == null || player.CustomProperties.ContainsKey("IsEliminated") && (bool)player.CustomProperties["IsEliminated"])
+        {
+            return; // Si el jugador está eliminado, no hacer nada
+        }
 
         if (player.TagObject is GameObject playerObj && playerObj.GetComponent<PlayerController>() is PlayerController controller)
         {
@@ -82,4 +74,5 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
             Debug.Log(eliminationMessage);
         }
     }
+
 }

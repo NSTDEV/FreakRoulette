@@ -4,64 +4,67 @@ using System.Collections;
 
 public class CandyGenerator : MonoBehaviour
 {
-    public GameObject candyPrefab;
-    public Animator candyAnimator;
-    public float respawnTime = 1.5f;
-    private bool isGenerating = false; // Bandera para controlar si está generando caramelos
+    public GameObject candyPrefab; // Prefab del caramelo asignado desde el editor
+    public float respawnTime = 1.5f; // Tiempo entre spawns
+    private bool isGenerating = false;
 
     void Start()
     {
-        // Asegúrate de que solo el Master Client inicie la generación de caramelos
         if (PhotonNetwork.IsMasterClient)
         {
-            StartCoroutine(RespawnCandy());
+            ResetGenerator();
         }
     }
 
-    // Llama a este método cuando se reinicie la generación de caramelos
     public void ResetGenerator()
     {
-        // Detener la generación actual y empezar de nuevo
-        StopAllCoroutines(); // Detén cualquier corrutina existente
-        StartCoroutine(RespawnCandy()); // Reinicia la generación de caramelos
+        StopAllCoroutines();
+        DestroyAllCandies();
+        StartCoroutine(RespawnCandy());
     }
 
     private IEnumerator RespawnCandy()
     {
-        if (isGenerating) yield break; // Evita iniciar otra corrutina
+        if (isGenerating) yield break;
         isGenerating = true;
 
         while (isGenerating)
         {
             yield return new WaitForSeconds(respawnTime);
 
-            Vector3 randomPosition = new Vector3(Random.Range(-6, 6), Random.Range(-3, 3), candyPrefab.transform.position.z);
+            // Genera una posición aleatoria manteniendo el z del prefab
+            Vector3 randomPosition = new Vector3(
+                Random.Range(-6, 6),
+                Random.Range(-3, 3),
+                candyPrefab.transform.position.z // Usar el valor de z del prefab
+            );
 
-            // Verificar si hay un caramelo en una posición cercana
-            Collider2D[] nearbyObjects = Physics2D.OverlapCircleAll(randomPosition, 0.5f);
-            bool candyExists = false;
-
-            foreach (var obj in nearbyObjects)
+            if (!IsCandyNearby(randomPosition))
             {
-                if (obj.CompareTag("Candy"))
+                // Instancia el caramelo en la posición correcta
+                GameObject newCandy = PhotonNetwork.Instantiate(candyPrefab.name, randomPosition, Quaternion.identity);
+
+                // Sincroniza la animación si el prefab tiene un componente Candy
+                Candy candy = newCandy.GetComponent<Candy>();
+                if (candy != null)
                 {
-                    candyExists = true;
-                    break;
+                    candy.Initialize(randomPosition);
                 }
-            }
-
-            if (!candyExists)
-            {
-                PhotonNetwork.Instantiate(candyPrefab.name, randomPosition, Quaternion.identity);
             }
         }
     }
 
-    // Detiene la generación de caramelos en todos los clientes
-    [PunRPC]
-    public void RPC_StopGeneration()
+    private bool IsCandyNearby(Vector3 position)
     {
-        isGenerating = false;
+        Collider2D[] nearbyObjects = Physics2D.OverlapCircleAll(position, 2.5f);
+        foreach (var obj in nearbyObjects)
+        {
+            if (obj.CompareTag("Candy"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void StopGeneration()
@@ -70,26 +73,28 @@ public class CandyGenerator : MonoBehaviour
         PhotonView.Get(this).RPC("RPC_StopGeneration", RpcTarget.All);
     }
 
-    // Este método se llama cuando el generador se desactiva
-    private void OnDisable()
+    [PunRPC]
+    public void RPC_StopGeneration()
     {
-        DestroyAllCandies(); // Elimina todos los caramelos cuando se desactiva
+        isGenerating = false;
     }
 
     private void DestroyAllCandies()
     {
-        // Encuentra todos los caramelos y destrúyelos en la red
         GameObject[] candies = GameObject.FindGameObjectsWithTag("Candy");
-        foreach (GameObject candy in candies)
+        foreach (GameObject candyObj in candies)
         {
-            PhotonView candyView = candy.GetComponent<PhotonView>();
-            if (candyView != null)
+            Candy candy = candyObj.GetComponent<Candy>();
+            PhotonView candyPhotonView = candyObj.GetComponent<PhotonView>();
+
+            if (candy != null)
             {
-                if (!candyView.IsMine && PhotonNetwork.IsMasterClient)
-                {
-                    candyView.TransferOwnership(PhotonNetwork.MasterClient); // Transfiere la propiedad al MasterClient
-                }
-                PhotonNetwork.Destroy(candy); // Destruye el caramelo
+                candy.TriggerDestruction(); // Activa la lógica de destrucción del caramelo
+            }
+
+            if (candyPhotonView != null)
+            {
+                PhotonNetwork.Destroy(candyPhotonView.gameObject); // Destruye el objeto en la red
             }
         }
     }

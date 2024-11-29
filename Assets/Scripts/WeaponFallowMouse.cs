@@ -28,8 +28,10 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
 
     void Update()
     {
+        // Solo permitir que el jugador propietario mueva su propia arma
         if (!photonView.IsMine || player == null) return;
 
+        // Obtener la posición del mouse en el mundo
         Vector3 mousePosition = GetMouseWorldPosition();
         Vector3 direction = (mousePosition - player.position).normalized;
 
@@ -37,17 +39,23 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
         Vector3 orbitPosition = player.position + direction * orbitRadius;
         transform.position = orbitPosition;
 
+        // Cambiar la dirección del arma
         ChangeGunDirection(direction);
-        photonView.RPC(nameof(ChangeGunDirection), RpcTarget.All, direction);
-        
-        if (photonView.IsMine)
-        {
-            photonView.RPC(nameof(GetMouseWorldPosition), RpcTarget.All);
 
-        }
+        // Sincronizar la dirección del arma con otros jugadores
+        photonView.RPC(nameof(UpdateWeaponRotation), RpcTarget.OthersBuffered, direction);
     }
 
     [PunRPC]
+    private void UpdateWeaponRotation(Vector3 direction)
+    {
+        // Solo los demás jugadores deben ver el movimiento de las armas
+        if (!photonView.IsMine)
+        {
+            ChangeGunDirection(direction);
+        }
+    }
+
     private void ChangeGunDirection(Vector3 direction)
     {
         // Calcular ángulo para la rotación
@@ -66,7 +74,6 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
         }
     }
 
-    [PunRPC]
     private Vector3 GetMouseWorldPosition()
     {
         if (Camera.main == null)

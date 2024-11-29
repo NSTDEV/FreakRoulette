@@ -38,11 +38,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         if (view.IsMine)
         {
-            if (PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("IsEliminated") &&
-                (bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
-            {
-                DisableMovement();
-            }
+            CheckPlayerEliminated();
 
             if (canMove)
             {
@@ -80,11 +76,34 @@ public class PlayerController : MonoBehaviourPunCallbacks
         if (view.IsMine)
         {
             PhotonNetwork.LocalPlayer.NickName = playerName.text;
+
+            // Asigna un avatar para el jugador (si es necesario)
             int avatarIndex = GetAvatarIndex();
             photonView.RPC(nameof(RPC_UpdateAvatar), RpcTarget.AllBuffered, avatarIndex);
+
+            // Inicializa las propiedades del jugador si no están presentes
+            InitializeCustomProperties();
+        }
+        else
+        {
+            // Asegúrate de que otros jugadores también tengan las propiedades necesarias
+            InitializeCustomProperties(view.Owner);
+        }
+    }
+
+    private void InitializeCustomProperties(Player player = null)
+    {
+        player = player ?? PhotonNetwork.LocalPlayer;
+
+        if (!player.CustomProperties.ContainsKey("Candies"))
+        {
+            player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "Candies", 0 } });
         }
 
-        RPC_SyncCandies(0);
+        if (!player.CustomProperties.ContainsKey("IsEliminated"))
+        {
+            player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", false } });
+        }
     }
 
     private int GetAvatarIndex()
@@ -92,60 +111,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
         return PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue("playerAvatar", out var avatarIndex)
             ? (int)avatarIndex
             : 0;
-    }
-
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("IsEliminated") &&
-            (bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
-        {
-            return;
-        }
-
-        if (other.CompareTag("Candy"))
-        {
-            PhotonView candyPhotonView = other.GetComponent<PhotonView>();
-            if (candyPhotonView == null)
-            {
-                Debug.LogError("El objeto 'Candy' no tiene un PhotonView asignado.");
-                return;
-            }
-
-            if (candyPhotonView.IsMine || PhotonNetwork.IsMasterClient)
-            {
-                CollectCandy(other.gameObject);
-            }
-        }
-    }
-
-    private void CollectCandy(GameObject candy)
-    {
-        RPC_IncreaseCandies();
-
-        if (PhotonNetwork.IsMasterClient)
-        {
-            PhotonView candyPhotonView = candy.GetComponent<PhotonView>();
-
-            if (candyPhotonView != null && candyPhotonView.IsMine)
-            {
-                photonView.RPC(nameof(RPC_DestroyCandy), RpcTarget.All, candyPhotonView.ViewID);
-            }
-        }
-    }
-
-    [PunRPC]
-    private void RPC_DestroyCandy(int viewID)
-    {
-        PhotonView candyPhotonView = PhotonView.Find(viewID);
-
-        if (candyPhotonView != null && candyPhotonView.gameObject != null)
-        {
-            Destroy(candyPhotonView.gameObject); // Eliminar el objeto de manera segura
-        }
-        else
-        {
-            Debug.LogWarning("El caramelo ya fue destruido o no existe.");
-        }
     }
 
     [PunRPC]
@@ -157,19 +122,73 @@ public class PlayerController : MonoBehaviourPunCallbacks
         }
     }
 
+    private void CheckPlayerEliminated()
+    {
+        if (PhotonNetwork.LocalPlayer.CustomProperties.ContainsKey("IsEliminated") &&
+            (bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
+        {
+            DisableMovement();
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if ((bool)PhotonNetwork.LocalPlayer.CustomProperties["IsEliminated"])
+        {
+            return;
+        }
+
+        if (other.CompareTag("Candy") && view.IsMine || PhotonNetwork.IsMasterClient)
+        {
+            CollectCandy(other.gameObject);
+        }
+    }
+
+    private void CollectCandy(GameObject candy)
+    {
+        RPC_IncreaseCandies();
+
+        if (candy != null) // Verifica que el caramelo aún existe
+        {
+            // Obtenemos el script Candy del objeto
+            Candy candyScript = candy.GetComponent<Candy>();
+            if (candyScript != null)
+            {
+                candyScript.TriggerDestruction();
+                photonView.RPC(nameof(RPC_DestroyCandy), RpcTarget.AllBuffered, candy.GetPhotonView().ViewID);
+            }
+        }
+    }
+
+    [PunRPC]
+    private void RPC_DestroyCandy(int viewID)
+    {
+        PhotonView candyPhotonView = PhotonView.Find(viewID);
+
+        if (candyPhotonView != null)
+        {
+            if (candyPhotonView.IsMine || PhotonNetwork.IsMasterClient)
+            {
+                PhotonNetwork.Destroy(candyPhotonView.gameObject); // Destruir el objeto de manera sincronizada
+            }
+        }
+        else
+        {
+            Debug.LogWarning("El caramelo ya fue destruido o no existe.");
+        }
+    }
+
     [PunRPC]
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
-
-        // Enviar actualización a todos los jugadores
         photonView.RPC(nameof(RPC_SyncCandies), RpcTarget.All, currentCandies);
 
         // Actualizar propiedades personalizadas
         ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
-    {
-        { "Candies", currentCandies }
-    };
+        {
+            { "Candies", currentCandies }
+        };
         PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
     }
 
@@ -182,7 +201,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
-        if (targetPlayer == view.Owner && changedProps.TryGetValue("PlayerName", out var newName))
+        if (targetPlayer != null && targetPlayer == view.Owner && changedProps.TryGetValue("PlayerName", out var newName))
         {
             playerName.text = (string)newName;
         }
@@ -192,23 +211,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         canMove = false; // Desactiva el movimiento
         animatorController.SetBool("Failed", true);
-
-        // Gradualmente parar el movimiento (opcional)
-        StartCoroutine(GradualStopMovement());
-    }
-
-    private IEnumerator GradualStopMovement()
-    {
-        float stopTime = 1f; // Tiempo para detenerse
-        float elapsedTime = 0f;
-
-        while (elapsedTime < stopTime)
-        {
-            rb.velocity = Vector2.Lerp(rb.velocity, Vector2.zero, elapsedTime / stopTime);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        rb.velocity = Vector2.zero; // Asegurarse de que la velocidad se ponga a cero
+        rb.velocity = Vector2.zero;
     }
 }

@@ -100,12 +100,13 @@ public class GameManager : MonoBehaviourPunCallbacks
 
             if (state && candyGenerator.TryGetComponent(out CandyGenerator generator))
             {
-                // Ahora solo llamamos a ResetGenerator si el generador está activado
+                // Reiniciar la generación si se activa
                 generator.ResetGenerator(); // Reinicia la generación de caramelos cuando se activa
             }
             else if (!state && candyGenerator.TryGetComponent(out CandyGenerator stopGenerator))
             {
-                stopGenerator.StopGeneration(); // Detiene la generación cuando se desactiva
+                // Detener la generación si se desactiva
+                stopGenerator.StopGeneration(); // Detiene la generación de caramelos
             }
 
             Debug.Log($"Candy Generator {(state ? "Activado" : "Desactivado")}");
