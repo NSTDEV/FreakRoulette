@@ -28,9 +28,9 @@ public class Candy : MonoBehaviourPunCallbacks
     {
         if (candyAnimator != null)
         {
-            candyAnimator.SetTrigger("Collected"); // Activa la animación de "recolectado"
-            yield return new WaitForSeconds(1f); // Espera a que termine la animación
+            candyAnimator.SetTrigger("Collected");
+            yield return new WaitForSeconds(1f);
         }
-        Destroy(gameObject); // Elimina el caramelo del cliente local
+        Destroy(gameObject);
     }
 }

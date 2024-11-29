@@ -32,6 +32,12 @@ public class PlayerController : MonoBehaviourPunCallbacks
         rb = GetComponent<Rigidbody2D>();
         view = GetComponent<PhotonView>();
         InitializePlayer();
+
+        // Llamar al RPC para actualizar el texto de caramelos al unirse
+        if (view.IsMine)
+        {
+            photonView.RPC("RPC_UpdateCandyText", RpcTarget.All, currentCandies);
+        }
     }
 
     private void Update()
@@ -159,7 +165,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
     public void RPC_IncreaseCandies()
     {
         currentCandies++;
-        candyText.text = currentCandies.ToString();
+        // Llamar al RPC para actualizar el texto global de los caramelos
+        photonView.RPC("RPC_UpdateCandyText", RpcTarget.All, currentCandies);
 
         // Actualizar propiedades personalizadas
         ExitGames.Client.Photon.Hashtable newProperties = new ExitGames.Client.Photon.Hashtable()
@@ -167,6 +174,13 @@ public class PlayerController : MonoBehaviourPunCallbacks
             { "Candies", currentCandies }
         };
         PhotonNetwork.LocalPlayer.SetCustomProperties(newProperties);
+    }
+
+    [PunRPC]
+    public void RPC_UpdateCandyText(int updatedCandies)
+    {
+        // Este método se llama en todos los jugadores para actualizar su UI
+        candyText.text = updatedCandies.ToString();
     }
 
     public void DisableMovement()
