@@ -20,15 +20,11 @@ public class Candy : MonoBehaviourPunCallbacks
     [PunRPC]
     public void TriggerDestruction()
     {
-        candyCollider.enabled = false; // Desactiva el collider
-
         if (candyAnimator != null)
         {
+            candyCollider.enabled = false;
+
             candyAnimator.SetTrigger("Collected");
-            StartCoroutine(CandyDestruction());
-        }
-        else
-        {
             StartCoroutine(CandyDestruction());
         }
     }

@@ -13,7 +13,7 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
     public void EliminatePlayerWithLowestPoints()
     {
         if (eliminateExecuted) return;
-        
+
         var playersToConsider = PhotonNetwork.PlayerList
             .Where(p => (bool)p.CustomProperties["IsEliminated"] == false) // Filtra jugadores no eliminados
             .ToList();
@@ -56,7 +56,7 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         }
 
         // Verificamos si solo queda un jugador después de la eliminación
-        CheckRemainingPlayers(); // Verifica si solo queda un jugador y manda a la escena de ganador
+        GameManager.Instance.CheckRemainingPlayers(); // Verifica si solo queda un jugador y manda a la escena de ganador
 
         eliminateExecuted = true;
     }
@@ -134,21 +134,6 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
         if (!string.IsNullOrEmpty(eliminationMessage))
         {
             Debug.Log(eliminationMessage);
-        }
-    }
-
-    // Función que detecta si solo queda un jugador
-    public void CheckRemainingPlayers()
-    {
-        // Contamos los jugadores activos (no eliminados)
-        var activePlayers = PhotonNetwork.PlayerList
-            .Where(p => !(bool)p.CustomProperties["IsEliminated"])
-            .ToArray();
-
-        if (activePlayers.Length == 1)
-        {
-            // Si solo queda un jugador, lo enviamos a la escena de ganador
-            photonView.RPC("LoadWinnerScene", RpcTarget.AllBuffered);
         }
     }
 }

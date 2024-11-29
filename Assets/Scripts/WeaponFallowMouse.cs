@@ -1,7 +1,8 @@
 using UnityEngine;
 using Photon.Pun;
+using System.Linq;
 
-public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
+public class WeaponFallowMouse : MonoBehaviourPunCallbacks
 {
     public Transform player; // Referencia al jugador
     public float orbitRadius = 1.5f; // Radio del círculo
@@ -51,8 +52,6 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
         Vector3 orbitPosition = player.position + direction * orbitRadius;
         transform.position = orbitPosition;
 
-        ChangeGunDirection(direction);
-
         // Solo enviar RPC si photonView no es null
         if (photonView != null)
         {
@@ -63,8 +62,7 @@ public class WeaponOrbitPlayer : MonoBehaviourPunCallbacks
     [PunRPC]
     private void UpdateWeaponRotation(Vector3 direction)
     {
-        // Solo los demás jugadores deben ver el movimiento de las armas
-        if (!photonView.IsMine)
+        if (photonView.IsMine)
         {
             ChangeGunDirection(direction);
         }

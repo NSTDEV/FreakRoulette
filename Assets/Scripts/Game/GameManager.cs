@@ -21,6 +21,11 @@ public class GameManager : MonoBehaviourPunCallbacks
     private bool isCandyRound;
     private InhabilitatePlayer eliminatePlayer;
 
+    private void Awake()
+    {
+        Instance = this;
+    }
+
     void Start()
     {
         timer = FindObjectOfType<TimerManager>();
@@ -33,9 +38,12 @@ public class GameManager : MonoBehaviourPunCallbacks
     {
         if (isRoundTransitioning) return;
 
-        if (timer.GetTimer() <= 0)
+        if (SceneManager.GetActiveScene().name != "Winner")
         {
-            StartCoroutine(SwitchRound(!isCandyRound)); // Alternar ronda
+            if (timer.GetTimer() <= 0)
+            {
+                StartCoroutine(SwitchRound(!isCandyRound)); // Alternar ronda
+            }
         }
     }
 
@@ -123,10 +131,10 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     public void ChangeToLobby()
     {
-        StartCoroutine(TransitionToLobby());
+        StartCoroutine(TransitionTo("Lobby"));
     }
 
-    private IEnumerator TransitionToLobby()
+    private IEnumerator TransitionTo(string sceneName)
     {
         SetTransitionState(true);
 
@@ -134,13 +142,26 @@ public class GameManager : MonoBehaviourPunCallbacks
         PhotonNetwork.LeaveRoom();
 
         yield return new WaitForSeconds(0.5f);
-        SceneManager.LoadScene("Lobby");
+        SceneManager.LoadScene(sceneName);
+    }
+
+    // Función que detecta si solo queda un jugador
+    public void CheckRemainingPlayers()
+    {
+        // Contamos los jugadores activos (no eliminados)
+        var activePlayers = PhotonNetwork.PlayerList
+            .Where(p => !(bool)p.CustomProperties["IsEliminated"])
+            .ToArray();
+
+        if (activePlayers.Length == 1)
+        {
+            photonView.RPC("LoadWinnerScene", RpcTarget.AllBuffered);
+        }
     }
 
     [PunRPC]
     public void LoadWinnerScene()
     {
-        // Carga la escena de ganador
-        SceneManager.LoadScene("Winner");
+        StartCoroutine(TransitionTo("Winner"));
     }
 }
