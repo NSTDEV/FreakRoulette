@@ -4,12 +4,19 @@ using UnityEngine;
 
 public class Candy : MonoBehaviourPunCallbacks
 {
+    Candy instance;
     public Animator candyAnimator;
     private BoxCollider2D candyCollider; // Declaración del collider
 
+    private void Awake()
+    {
+        instance = this;
+        candyCollider = GetComponent<BoxCollider2D>();
+    }
+
     void Start()
     {
-        candyCollider = GetComponent<BoxCollider2D>(); // Obtener el componente BoxCollider2D
+        candyCollider = GetComponent<BoxCollider2D>();
     }
 
     public void Initialize(Vector3 initPosition)

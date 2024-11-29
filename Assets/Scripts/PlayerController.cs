@@ -31,7 +31,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         if (view.IsMine)
         {
             photonView.RPC("RPC_UpdateCandyText", RpcTarget.AllBuffered, currentCandies);
-            PhotonNetwork.LocalPlayer.TagObject = gameObject; // Asignar TagObject aquí
+            PhotonNetwork.LocalPlayer.TagObject = gameObject;
         }
     }
 
@@ -132,7 +132,16 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private void CollectCandy(GameObject candy)
     {
-        RPC_IncreaseCandies();
+        currentCandies++;
+
+        // Actualizar la propiedad de "Candies" en Photon
+        PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
+    {
+        { "Candies", currentCandies }
+    });
+
+        // Actualizar el texto de los puntos
+        photonView.RPC("RPC_UpdateCandyText", RpcTarget.AllBuffered, currentCandies);
 
         if (candy != null)
         {

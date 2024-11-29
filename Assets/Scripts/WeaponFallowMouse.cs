@@ -48,13 +48,19 @@ public class WeaponFallowMouse : MonoBehaviourPunCallbacks
         Vector3 mousePosition = GetMouseWorldPosition();
         if (mousePosition == Vector3.zero) return;
 
-        Vector3 direction = (mousePosition - player.position).normalized;
-        Vector3 orbitPosition = player.position + direction * orbitRadius;
-        transform.position = orbitPosition;
-
         // Solo enviar RPC si photonView no es null
         if (photonView != null)
         {
+            Vector3 direction = (mousePosition - player.position).normalized;
+            Vector3 orbitPosition = player.position + direction * orbitRadius;
+
+            if (photonView != null && direction == Vector3.zero)
+            {
+                Debug.LogWarning("La dirección del mouse es nula. Ignorando actualización de rotación.");
+                return;
+            }
+
+            transform.position = orbitPosition;
             photonView.RPC(nameof(UpdateWeaponRotation), RpcTarget.AllBuffered, direction);
         }
     }

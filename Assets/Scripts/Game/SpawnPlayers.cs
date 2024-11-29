@@ -38,4 +38,20 @@ public class SpawnPlayers : MonoBehaviourPunCallbacks
             PhotonNetwork.Destroy(player);
         }
     }
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        base.OnPlayerEnteredRoom(newPlayer);
+
+        // Aquí inicializas al jugador recién entrado
+        InitializeNewPlayer(newPlayer);
+    }
+
+    private void InitializeNewPlayer(Player newPlayer)
+    {
+        if (!newPlayer.CustomProperties.ContainsKey("IsEliminated"))
+        {
+            newPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", false } });
+        }
+    }
 }

@@ -1,80 +1,85 @@
 using Photon.Pun;
 using Photon.Realtime;
-using System.Collections;
-using System.Linq;
 using UnityEngine;
+using System.Linq;
+using System.Collections;
 
 public class InhabilitatePlayer : MonoBehaviourPunCallbacks
 {
     public Animator shadowAnimator;
     private string eliminationMessage;
-    private bool eliminateExecuted = false;
 
     public void EliminatePlayerWithLowestPoints()
     {
-        if (eliminateExecuted) return;
-
+        // Filtrar jugadores no eliminados y ordenarlos por sus puntos
         var playersToConsider = PhotonNetwork.PlayerList
-            .Where(p => (bool)p.CustomProperties["IsEliminated"] == false) // Filtra jugadores no eliminados
+            .Where(p => !p.CustomProperties.ContainsKey("IsEliminated") || !(bool)p.CustomProperties["IsEliminated"])
+            .OrderBy(p => (int)p.CustomProperties["Candies"])
             .ToList();
 
-        // Verificar si hay jugadores para eliminar
-        if (playersToConsider.Count == 0)
+        // Si solo queda un jugador, no se elimina a nadie más
+        if (playersToConsider.Count <= 1)
         {
-            Debug.Log("No hay jugadores restantes para eliminar.");
+            Debug.Log("Queda un solo jugador. No se eliminará a nadie.");
             return;
         }
 
-        // Ordena por puntos (Candies) y selecciona el primero
-        var playerToEliminate = playersToConsider
-            .OrderBy(p => (int)p.CustomProperties["Candies"])
-            .FirstOrDefault();
-
-        if (playerToEliminate == null)
-        {
-            Debug.Log("No se encontró un jugador con puntos para eliminar.");
-            return;
-        }
-
+        // Seleccionar al jugador con menor puntaje
+        var playerToEliminate = playersToConsider.First();
         int lowestPoints = (int)playerToEliminate.CustomProperties["Candies"];
-        bool isEliminated = Random.value <= 0.5f; // 50% de probabilidad de eliminación
 
-        eliminationMessage = isEliminated
-            ? $"{playerToEliminate.NickName} ha sido eliminado con {lowestPoints} puntos."
-            : $"{playerToEliminate.NickName} ha sobrevivido con {lowestPoints} puntos.";
+        Debug.Log($"Jugador con menor puntaje: {playerToEliminate.NickName} ({lowestPoints} puntos)");
 
-        photonView.RPC(nameof(DisplayEliminationMessageRPC), RpcTarget.AllBuffered);
+        // Eliminar al jugador seleccionado
+        photonView.RPC(nameof(HandlePlayerEliminationRPC), RpcTarget.AllBuffered, playerToEliminate.UserId);
 
-        // Si el jugador es eliminado, procesamos la eliminación
-        if (isEliminated)
+        // Verificar si quedan más jugadores
+        GameManager.Instance.CheckRemainingPlayers();
+    }
+
+    private void CheckRemainingPlayers()
+    {
+        // Filtra los jugadores no eliminados
+        var remainingPlayers = PhotonNetwork.PlayerList
+            .Where(p => !p.CustomProperties.ContainsKey("IsEliminated") || !(bool)p.CustomProperties["IsEliminated"])
+            .ToList();
+
+        // Si solo queda un jugador, manda a la escena de "Winner"
+        if (remainingPlayers.Count == 1)
         {
-            photonView.RPC(nameof(HandlePlayerEliminationRPC), RpcTarget.AllBuffered, playerToEliminate.UserId);
+            photonView.RPC(nameof(SendToWinnerScene), RpcTarget.AllBuffered);
         }
-        else
-        {
-            photonView.RPC(nameof(StartFailedAnimationRPC), RpcTarget.AllBuffered);
-        }
-
-        // Verificamos si solo queda un jugador después de la eliminación
-        GameManager.Instance.CheckRemainingPlayers(); // Verifica si solo queda un jugador y manda a la escena de ganador
-
-        eliminateExecuted = true;
     }
 
     [PunRPC]
-    private void HandlePlayerEliminationRPC(string playerId)
+    private void SendToWinnerScene()
     {
-        var player = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
-        if (player == null) return;
+        // Aquí podrías agregar la lógica para cambiar a la escena de "Winner"
+        Debug.Log("¡Ha quedado un solo jugador! Cambiando a la escena 'Winner'.");
+        // SceneManager.LoadScene("Winner"); // Usa esto si estás utilizando SceneManager de Unity
+        PhotonNetwork.LoadLevel("Winner"); // Usar esto si estás trabajando con Photon para cargar la escena
+    }
 
-        // Iniciar animación de eliminación (por ejemplo, "Eating")
-        photonView.RPC(nameof(StartEatingAnimationRPC), RpcTarget.AllBuffered);
-
-        // Establecer la propiedad de eliminación
-        player.SetCustomProperties(new ExitGames.Client.Photon.Hashtable { { "IsEliminated", true } });
-
-        // Llamar al RPC para deshabilitar el movimiento
-        photonView.RPC(nameof(DisablePlayerMovementRPC), RpcTarget.AllBuffered, playerId);
+    [PunRPC]
+    public void HandlePlayerEliminationRPC(string playerId)
+    {
+        // Buscar al jugador a eliminar basado en su ID
+        foreach (var player in PhotonNetwork.PlayerList)
+        {
+            if (player.UserId == playerId)
+            {
+                // Verificar si el jugador es el local y deshabilitar su movimiento
+                if (player.TagObject is GameObject playerObject)
+                {
+                    var playerController = playerObject.GetComponent<PlayerController>();
+                    if (playerController != null)
+                    {
+                        playerController.DisableMovement();
+                    }
+                }
+                break;
+            }
+        }
     }
 
     [PunRPC]
@@ -101,17 +106,7 @@ public class InhabilitatePlayer : MonoBehaviourPunCallbacks
     public void DisablePlayerMovementRPC(string playerId)
     {
         var player = PhotonNetwork.PlayerList.FirstOrDefault(p => p.UserId == playerId);
-        if (player == null)
-        {
-            Debug.LogError($"No se encontró el jugador con ID: {playerId}");
-            return;
-        }
-
-        if (player.TagObject == null)
-        {
-            Debug.LogWarning($"El `TagObject` no está configurado para el jugador: {player.NickName}");
-            return;
-        }
+        if (player == null) return;
 
         if (player.TagObject is GameObject playerObj)
         {
