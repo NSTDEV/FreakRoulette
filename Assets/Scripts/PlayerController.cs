@@ -33,6 +33,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         view = GetComponent<PhotonView>();
         InitializePlayer();
 
+
         // Llamar al RPC para actualizar el texto de caramelos al unirse
         if (view.IsMine)
         {
@@ -58,9 +59,15 @@ public class PlayerController : MonoBehaviourPunCallbacks
         if (canMove)
         {
             rb.velocity = mInput * moveSpeed;
-        }
+            animatorController.SetBool("Walking", rb.velocity.sqrMagnitude > 0.01f);
 
-        animatorController.SetBool("Walking", rb.velocity.sqrMagnitude > 0.01f);
+            if (rb.velocity.sqrMagnitude <= 0)
+            {
+                animatorController.SetBool("Walking", false);
+            }
+        }
+        else rb.velocity = Vector2.zero;
+
 
         if (mInput.x != 0)
         {
@@ -75,6 +82,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     private void InitializePlayer()
     {
+        EnableMovement();
         playerName.text = view.IsMine
             ? PlayerPrefs.GetString("PlayerName", "Player")
             : view.Owner.NickName;
@@ -132,6 +140,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
         {
             DisableMovement();
         }
+        else
+        {
+            EnableMovement();
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -187,6 +199,12 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         canMove = false; // Desactiva el movimiento
         animatorController.SetBool("Failed", true);
-        rb.velocity = Vector2.zero;
+    }
+
+    public void EnableMovement()
+    {
+        canMove = true; // Habilita el movimiento
+        animatorController.SetBool("Failed", false); // Vuelve al estado normal
+        animatorController.SetBool("Walking", rb.velocity.sqrMagnitude > 0.01f); // Inicia la animación de caminar solo si hay movimiento
     }
 }

@@ -24,7 +24,7 @@ public class GameManager : MonoBehaviourPunCallbacks
     {
         timer = FindObjectOfType<TimerManager>();
         candyGenerator = FindObjectOfType<CandyGenerator>()?.gameObject;
-        
+
         isCandyRound = true;
     }
 
@@ -130,15 +130,12 @@ public class GameManager : MonoBehaviourPunCallbacks
     private IEnumerator TransitionToLobby()
     {
         SetTransitionState(true);
+
         yield return new WaitForSeconds(transitionDuration);
         PhotonNetwork.LeaveRoom();
-        OnLeftRoom();
-    }
 
-    // Llamado cuando el jugador abandona la sala
-    public override void OnLeftRoom()
-    {
-        Debug.Log("Se ha salido de la sala.");
+        yield return new WaitForSeconds(0.5f);
         SceneManager.LoadScene("Lobby");
     }
+
 }
